@@ -1,0 +1,1603 @@
+---
+title: "Judiciary"
+output: html_document
+---
+
+```{r}
+
+library (dplyr)
+library (readxl)
+library(writexl)
+library (DT)
+library(data.table)
+
+```
+
+Indicators
+
+Workload
+
+1. Share of cases pending in subordinate court for 5-10 years (%, 2018)
+2. Share of cases pending in subordinate court for more than 10 years (%, 2018)
+3. Average pendency in High court (Years, 2017-18)
+4. Average pendency in Subordinate court (Years, 2017-18)
+5. High Court cases, clearance rate (%, 2016-17)
+6. Subordinate Court cases, clearance rate (%, 2016-17)
+
+Trends
+1. Trends in clearance rate of Subordinate Courts' cases (% points,2016-17)
+2. Trends in clearance rate of High Courts' cases (% points,2016-17)
+3. Trends in pending cases per High Court judge (%, 2016-17)
+4. Trends in pending cases per Subordinate Court judge(%, 2016-17)
+5. Trends in pendency in High Court (%, 2016-17)
+6. Trends in pendency in Subordinate Court (%, 2016-17)
+7. Trends in Subordinate Court judges, vacancies (% points, 2016-17)
+8. Trends in High Court judges,vacancies (% points, 2016-17)
+9. Trends in state expenditure on judiciary (%, 2015-16)
+
+Infrastructure
+1. Courthalls, vacancy (%, March'18, 2016-17)
+
+Human Resources
+1. Population per HC judge (2016-17)
+2. Population per Subordinate Court judge (2016-17)
+3. High Court judges, vacancy (%, 2016-2017)
+4. Subordinate Court judges, vacancy (%, 2016-17)
+5. High Court non judicial staff, Vacancy (%, 2016-17)
+
+Diversity
+1. Share of women judges in subordinate courts (%, 2017)
+2. Share of women judges in High Court (%, 2017)
+
+Budgets
+1. Judiciary expenditure per capita (Rs, 2015 - 16)
+2. budgets (average five years change in judiciary_expenditure - average five year change in state expenditure)
+
+```{r}
+
+```
+
+Indicators
+*Theme* : **Workload**
+1 *Indicator* : Share of cases pending in subordinate court for 5-10 years (%, 2018)
+*Short name* : Pendency (5-10 years) (lower court) (%, 2018)
+
+2 *Indicator* : Share of cases pending in subordinate court for more than 10 years (%, 2018)
+*Short name* : Pendency (10+ years) (lower court) (%, 2018)
+
+```{r}
+
+pending_cases <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Pending Sub Court.xlsx", sheet = "Sheet1")
+
+pending_cases$`5-10 years cases share (%)` <- as.numeric(pending_cases$`5-10 years cases share (%)`)
+pending_cases$`Above 10 years cases share (%)` <- as.numeric(pending_cases$`Above 10 years cases share (%)`)
+
+IN1 <- pending_cases %>% 
+  select("States", "Year", "5-10 years cases share (%)", "Above 10 years cases share (%)") %>% 
+  mutate("5-10 years cases share (%)" = (`5-10 years cases share (%)`)) %>% 
+  mutate("Above 10 years cases share (%)" = (`Above 10 years cases share (%)`)) 
+  
+
+```
+
+
+3 *Indicator* : Average pendency in High court (Years, 2017-18)
+*Short name* :  High court Pendency (Years, 2017-18)
+
+```{r}
+
+pendency_highcourt <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Average pendency (days).xlsx")
+IN2 <- pendency_highcourt %>% 
+  filter(Year==2017)
+IN2$`Financial Year` <- NULL
+IN2$Variables <- NULL
+
+```
+4. *Indicator* : Average pendency in Subordinate court (Years, 2017-18)
+*Short name* :  Lower court Pendency (Years, 2017-18)
+```{r}
+
+pendency_subcourt <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Average pendency (days).xlsx", sheet = "Subordinate Courts")
+IN3 <- pendency_subcourt 
+IN3$`financial year` <- NULL
+IN3$`Data as on` <- NULL
+
+```
+
+5. *Indicator* : High Court cases, clearance rate (%, 2016-17)
+*Short name* :  Case clearance rate (High Courts) (2016-17)
+
+```{r}
+
+HC_CCR <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Case clearance rate.xlsx", sheet = "HC - Total - CCR")
+
+IN4 <- HC_CCR %>% 
+  select("States", "Year", "HC - CCR") %>% 
+  mutate("HC - CCR" = (`HC - CCR`))
+
+```
+6. *Indicator* : Lower Court cases, clearance rate (%, 2016-17)
+*Short name*  : Case clearance rate (Lower Courts) (2016-17)
+
+```{r}
+
+SC_CCR <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Case clearance rate.xlsx", sheet = "SC - Total - CCR")
+
+IN5 <- SC_CCR %>% 
+  select("States", "Year", "Sub-court - CCR")
+
+```
+*Theme* : **Infrastructure**
+
+1. *Indicator*  : Courthalls, vacancy (%, March'18, 2016-17)
+   *Short name* : Courthall shortfall (2016-March '18)
+
+```{r}
+
+courthalls <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Courthalls.xlsx")
+
+IN6 <- courthalls %>% 
+  select("States", "Year", "Vacancy (%)") 
+ 
+```
+
+*Theme* : **Human Resource**
+
+1. *Indicator*  : Population per HC judge (2016-17)
+   *Short name* : Population per HC judge (2016-17)
+
+```{r}
+
+pop <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/total_pop.xlsx")
+pop_HC <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/total_pop_jud.xlsx")
+
+avg_judges <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judge to population ratio.xlsx")
+avg_judges_lakh_pop <- left_join(pop_HC, avg_judges, by = c("States", "Year"))
+avg_judges_lakh_pop <- avg_judges_lakh_pop %>% 
+  mutate("HC:people per HC judge" = (`Population (PCA)`/ `HC: Judges`))
+
+IN7 <- avg_judges_lakh_pop %>% 
+  select("States", "Year", "HC:people per HC judge") 
+  
+```
+
+2. *Indicator*  : Population per Subordinate Court judge (2016-17)
+   *Short name* : Population per lower Court judge (2016-17)
+   
+```{r}
+
+pop_LC <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/total_pop_jud.xlsx", sheet = "LC")
+
+SC_avg_judges <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judge to population ratio.xlsx", sheet = "Subordinate Court")
+SC_avg_judges_lakh_pop <- left_join(pop_LC, SC_avg_judges, by = c("States", "Year"))
+SC_avg_judges_lakh_pop <- SC_avg_judges_lakh_pop %>% 
+  mutate("SC:people per_SC judge" = round(`Population (PCA)`/ `Sub_court: Judges`,2))
+
+IN8 <- SC_avg_judges_lakh_pop %>% 
+  select("States", "Year", "SC:people per_SC judge")
+
+
+```
+
+
+3. *Indicator*  : High Court judges, vacancy (%, 2016-2017)
+   *Short name* : High Court judges vacancies (%, 2016-2017) 
+
+```{r}
+
+HC_judges <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Number of courts - sanctioned and working.xlsx", sheet = "HC Actual %")
+HC_judges_vacancy <- HC_judges %>% 
+  select("States", "Year", "HC judges: actual to sanctioned") %>% 
+  mutate("HC judges: vacancy" = (100-`HC judges: actual to sanctioned`*100))
+
+IN9 <- HC_judges_vacancy %>% 
+  select("States", "Year", "HC judges: vacancy")
+
+
+```
+
+4. *Indicator*  : Subordinate Court judges, vacancy (%, 2016-17)
+   *Short name* : Lower Court judges vacancies (%, 2016-17)
+
+```{r}
+
+SC_judges <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Number of courts - sanctioned and working.xlsx", sheet = "SC Actual%")
+SC_judges_vacancy <- SC_judges %>% 
+  select("States", "Year", "Sub-Court: actual to sanctioned") %>% 
+  mutate("Sub-Court judges: vacancy" = (100-`Sub-Court: actual to sanctioned`*100))
+
+IN10 <- SC_judges_vacancy %>% 
+  select("States", "Year", "Sub-Court judges: vacancy")
+
+
+```
+5. *Indicator*  : High Court non judicial staff, Vacancy (%, 2016-17)
+   *Short name* : High Court Staff shortage (%, 2016-17) 
+
+```{r}
+
+HC_non_jud <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Number of court staff (High Court).xlsx")
+
+IN11 <- HC_non_jud %>% 
+  select("States", "Year", "Vacancy % Staff") %>% 
+  mutate("Vacancy % Staff" = (`Vacancy % Staff`*100))
+
+```
+
+*Theme* : **Diversity**
+
+1. *Indicator*  : Share of women judges in subordinate courts (%, 2017)
+   *Short name* : Share of women judges (lower courts) (%, 2017)
+   
+```{r}
+
+sub_court_women <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary diversity.xlsx", sheet = "Share of women judges")
+sub_court_women$`Share of women judges in subordinate courts` <- as.numeric(sub_court_women$`Share of women judges in subordinate courts`)
+
+IN12 <- sub_court_women %>% 
+  select("States", "Year", "Share of women judges in subordinate courts") %>% 
+  mutate("Share of women judges in subordinate courts" = (`Share of women judges in subordinate courts`*100))
+
+```
+   
+2. *Indicator*  : Share of women judges in High Court (%, 2017)
+   *Short name* : Share of women judges (High Court) (%, 2017)
+   
+```{r}
+
+HC_women <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/High Court Diversity.xlsx")
+IN13 <- HC_women %>% 
+  select("States", "Year", "HC: Share of women judges") %>% 
+  mutate("HC: Share of women judges" = (`HC: Share of women judges`*100))
+
+```
+
+*Theme* : **Budgets**
+
+1. *Indicator*  : Judiciary expenditure per capita (Rs, 2015 - 16)
+   *Short name* : Per capita spend on judiciary (Rs, 2015 - 16)
+   
+2. *Indicator*  : State spend on the judiciary (Rs, 2015-16)
+   *Short name* : State spend on the judiciary (Rs, 2015-16)
+   
+```{r}
+
+jud_exp <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Expenditure judiciary.xlsx")
+jud_exp_per_pop <- left_join(pop,jud_exp, by= c("States", "Year"))
+jud_exp_per_pop$`Population (PCA)` <- as.numeric(jud_exp_per_pop$`Population (PCA)`)
+jud_exp_per_pop$`Expenditure of Administration of Justice (Rs lakh)` <- as.numeric(jud_exp_per_pop$`Expenditure of Administration of Justice (Rs lakh)`)
+jud_exp_per_pop <- jud_exp_per_pop %>% 
+  mutate("jud_exp_per_pop" = (`Expenditure of Administration of Justice (Rs lakh)`/`Population (PCA)`*100000))
+
+IN14<- jud_exp_per_pop %>% 
+  select("States", "Year", "jud_exp_per_pop") 
+  
+
+```
+
+3. *Indicator*  : Budget difference (Rs, 2015-16)
+   *Short name* : Budget difference (Rs, 2015-16)
+
+```{r}
+
+state_expend <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/State Expenditure.xlsx")
+state_trend <- state_expend %>%
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  filter(!is.na(`State expenditure (Rs lakhs)`), !is.infinite(`State expenditure (Rs lakhs)`), `State expenditure (Rs lakhs)` !=0 ) %>% 
+  mutate("Y-o-Y:state_exp" = ((`State expenditure (Rs lakhs)` - lag(`State expenditure (Rs lakhs)`))/lag(`State expenditure (Rs lakhs)`)*100)) %>% 
+  mutate("average:state_exp" = (mean(`Y-o-Y:state_exp`, na.rm = TRUE)))
+
+pillar_trend <- jud_exp %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  filter(!is.na(`Expenditure of Administration of Justice (Rs lakh)`), !is.infinite(`Expenditure of Administration of Justice (Rs lakh)`), `Expenditure of Administration of Justice (Rs lakh)` !=0) %>% 
+  mutate("Y-o-Y:jud_exp" = ((`Expenditure of Administration of Justice (Rs lakh)` - lag(`Expenditure of Administration of Justice (Rs lakh)`))/lag(`Expenditure of Administration of Justice (Rs lakh)`)*100)) %>%   
+  mutate("average:jud_exp" = (mean(`Y-o-Y:jud_exp`, na.rm = TRUE)))
+
+exp_state_jud <- left_join(state_trend, pillar_trend, by = c("States", "Year"))
+exp_state_jud <- exp_state_jud %>% 
+  mutate(budget_comparison = `average:jud_exp` - `average:state_exp`)
+
+#jud_exp_state_exp <- left_join(state_expend, jud_exp, by = c("States", "Year"))
+
+#jud_exp_state_exp <- jud_exp_state_exp %>% 
+#  rowwise() %>% 
+#  mutate("jud_exp_state_exp" = ((`Expenditure of Administration of Justice (Rs lakh)`/`State expenditure (Rs lakhs)`)*100))
+  
+write_xlsx(exp_state_jud, "/Users/shreyaagarwal/Desktop/bud_c.xlsx")
+
+IN15 <- exp_state_jud %>% 
+  select("States", "Year", "average:jud_exp", "average:state_exp" , "budget_comparison")
+
+#write_xlsx(IN15, "/Users/shreyaagarwal/Desktop/bud_c.xlsx")
+
+```
+
+*Theme* : **Trends**
+
+1. *Indicator*  : Trends in clearance rate of Subordinate Courts' cases (% points,2016-17)
+   *Short name* : Case clearance rate (lower Courts) (2012-17)
+
+```{r}
+
+IN16 <- IN5 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Sub-court - CCR`), !is.infinite(`Sub-court - CCR`)) %>% 
+  mutate("Y-o-Y:SC_CCR" = `Sub-court - CCR` - lag(`Sub-court - CCR`))%>%
+  mutate("Average:SC_CCR" = mean(`Y-o-Y:SC_CCR`, na.rm = TRUE)) 
+
+IN16$`Sub-court - CCR` <- NULL
+IN16$`Y-o-Y:SC_CCR` <- NULL
+
+```
+
+
+2. *Indicator*  : Trends in clearance rate of High Courts' cases (% points,2016-17)
+   *Short name* : Case clearance rate (High Courts) (2012-17)
+
+```{r}
+
+IN17 <- IN4 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010, !is.na(Year)) %>% 
+  #filter(!is.na(`HC - CCR`), !is.infinite(`HC - CCR`)) %>% 
+  mutate("Y-o-Y:HC_CCR" = `HC - CCR` - lag(`HC - CCR`))%>%
+  mutate("Average:HC_CCR" = mean(`Y-o-Y:HC_CCR`, na.rm = TRUE))
+
+IN17$`HC - CCR` <- NULL
+IN17$`Y-o-Y:HC_CCR` <- NULL
+
+```
+
+3. *Indicator*  : Trends in pending cases per High Court judge (%, 2016-17)
+   *Short name* : Cases pending (High Court judge) (2012-17)
+
+```{r}
+
+pending_judges <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Cases pending per judge.xlsx", sheet = "HC pending judge")
+
+IN18 <- pending_judges %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010, !is.na(Year)) %>% 
+  #filter(!is.na(`HC: Average number of cases pending per judge`), !is.infinite(`HC: Average number of cases pending per judge`)) %>% 
+  mutate("Y-o-Y: HC - Average number of cases pending per judge" = (`HC: Average number of cases pending per judge` - lag(`HC: Average number of cases pending per judge`))/lag(`HC: Average number of cases pending per judge`)*100) %>% 
+  mutate("Average: HC - pending cases per judge" = (mean(`Y-o-Y: HC - Average number of cases pending per judge`, na.rm = TRUE)))
+
+IN18$`HC: Average number of cases pending per judge` <- NULL
+IN18$`Y-o-Y: HC - Average number of cases pending per judge` <- NULL
+
+```
+
+4. *Indicator*  : Trends in pending cases per Subordinate Court judge(%, 2016-17)
+   *Short name* : Case pending (lower Courts judge) (2012-17)
+
+```{r}
+
+pending_judges_SC <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Cases pending per judge.xlsx", sheet = "SC pending judge")
+
+IN19 <- pending_judges_SC %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010, !is.na(Year)) %>% 
+  #filter(!is.na(`SC: Average number of cases pending per judge`), !is.infinite(`SC: Average number of cases pending per judge`)) %>% 
+  mutate("Y-o-Y: SC - Average number of cases pending per judge" = (`SC: Average number of cases pending per judge` - lag(`SC: Average number of cases pending per judge`))/lag(`SC: Average number of cases pending per judge`)*100) %>% 
+  mutate("Average: SC - pending cases per judge" = (mean(`Y-o-Y: SC - Average number of cases pending per judge`, na.rm = TRUE)))
+
+
+IN19$`SC: Average number of cases pending per judge` <- NULL
+IN19$`Y-o-Y: SC - Average number of cases pending per judge` <- NULL
+
+
+```
+
+5. *Indicator*  : Trends in pendency in High Court (%, 2016-17)
+   *Short name* : Pendency in High Court (2012-17)
+
+```{r}
+
+pending_HC <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Cases pending per judge.xlsx", sheet = "HC pending cases")
+
+IN20a <- pending_HC %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010, !is.na(Year)) %>% 
+  #filter(!is.na(`HC: pending cases`), !is.infinite(`HC: pending cases`)) %>% 
+  mutate("Y-o-Y: HC: pending cases" = (`HC: pending cases` - lag(`HC: pending cases`))/lag(`HC: pending cases`)*100) %>% 
+  mutate("Average: HC: pending cases" = (mean(`Y-o-Y: HC: pending cases`, na.rm = TRUE)))
+
+
+
+IN20a$`Average: HC: pending cases` <- as.numeric(IN20a$`Average: HC: pending cases`)
+
+IN20<- IN20a %>% 
+  select("States", "Year", "Average: HC: pending cases")
+
+```
+
+
+6. *Indicator*  : Trends in pendency in Subordinate Court (%, 2016-17)
+   *Short name* : Pendency in Lower Courts (2012-17)
+
+```{r}
+
+pending_SC <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Judiciary/Judiciary Data/Judiciary Indicators - Data/Cases pending per judge.xlsx", sheet = "SC pending cases")
+
+IN21 <- pending_SC %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010, !is.na(Year)) %>% 
+  #filter(!is.na(`SC: Pending cases`), !is.infinite(`SC: Pending cases`)) %>% 
+  mutate("Y-o-Y: SC: pending cases" = (`SC: Pending cases` - lag(`SC: Pending cases`))/lag(`SC: Pending cases`)*100) %>% 
+  mutate("Average: SC: pending cases" = (mean(`Y-o-Y: SC: pending cases`, na.rm = TRUE)))
+
+IN21$`Average: SC: pending cases` <- as.numeric(IN21$`Average: SC: pending cases`)
+
+IN21 <- IN21 %>% 
+  select("States", "Year", "Average: SC: pending cases")
+
+```
+7. *Indicator*  : Trends in Subordinate Court judges, vacancies (% points, 2016-17)
+   *Short name* : Judge vacancy (lower court) (2012-17)
+   
+```{r}
+
+IN22 <- SC_judges_vacancy %>% 
+  select("States", "Year", "Sub-Court judges: vacancy")
+
+IN22$`Sub-Court judges: vacancy` <- as.numeric(IN22$`Sub-Court judges: vacancy`)
+
+IN22a <- IN10 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  mutate("Y-o-Y:SC_judges_vacancy" = `Sub-Court judges: vacancy` - lag(`Sub-Court judges: vacancy`))%>%
+  mutate("Average:SC_judges_vacancy" = (mean(`Y-o-Y:SC_judges_vacancy`, na.rm = TRUE)))
+
+IN22$`Sub-Court judges: vacancy` <- NULL
+IN22$`Y-o-Y:SC_judges_vacancy` <- NULL
+
+
+```
+
+8. *Indicator*  : Trends in High Court judges,vacancies (% points, 2016-17)
+   *Short name* : Judge vacancy (High court) (2012-17)
+
+
+```{r}
+
+IN23 <- IN9 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  mutate("Y-o-Y:HC_judges_vacancy" = `HC judges: vacancy` - lag(`HC judges: vacancy`))%>%
+  mutate("Average:HC_judges_vacancy" = (mean(`Y-o-Y:HC_judges_vacancy`, na.rm = TRUE)))
+
+#write_xlsx(IN23, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/trendscheck1.xlsx")  
+
+IN23$`HC judges: vacancy` <- NULL
+IN23$`Y-o-Y:HC_judges_vacancy` <- NULL
+
+```
+
+
+```{r}
+
+judiciary <- left_join(IN4, IN5 , by= c("States", "Year"))
+judiciary <- merge(judiciary, IN1 , by= c("States", "Year"), all = TRUE)
+judiciary <- merge(judiciary, IN2 , by= c("States", "Year"), all = TRUE)
+judiciary <- merge(judiciary, IN3 , by= c("States", "Year"), all = TRUE)
+IN6$Year <- as.numeric(IN6$Year)
+judiciary <- left_join(judiciary, IN6 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN7 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN8 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN9 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN10 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN11 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN12 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN13 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN14 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN15 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN16 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN17 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN18 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN19 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN20 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN21 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN22 , by= c("States", "Year"))
+judiciary <- left_join(judiciary, IN23 , by= c("States", "Year"))
+
+```
+
+```{r}
+
+#write_xlsx(judiciary, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/Judiciary.xlsx")
+
+```
+
+
+```{r}
+
+setnames(judiciary, "5-10 years cases share (%)", "Pendency (5-10 years) (lower court) (%, 2018)")
+setnames(judiciary, "Above 10 years cases share (%)", "Pendency (10+ years) (lower court) (%, 2018)")
+setnames(judiciary, "HC: Average Pendency (years)", "High court Pendency (Years, 2017-18)")
+setnames(judiciary, "SC: Average Pendency (years)", "Lower court Pendency (Years, 2017-18)")
+setnames(judiciary, "HC - CCR", "Case clearance rate (High Courts) (2016-17)")
+setnames(judiciary, "Sub-court - CCR", "Case clearance rate (Lower Courts) (2016-17)")
+setnames(judiciary, "Vacancy (%)", "Courthall shortfall (2016, March '18)")
+setnames(judiciary, "HC:people per HC judge", "Population per HC judge (2016-17)")
+setnames(judiciary, "SC:people per_SC judge", "Population per Lower Court judge (2016-17)")
+setnames(judiciary, "HC judges: vacancy", "High Court judges vacancies (%, 2016-2017)")
+setnames(judiciary, "Sub-Court judges: vacancy", "Lower Court judges vacancies (%, 2016-17)")
+setnames(judiciary, "Vacancy % Staff", "High Court staff vacancy (%, 2016-17)")
+setnames(judiciary, "Share of women judges in subordinate courts", "Share of women judges (lower courts) (%, 2017)")
+setnames(judiciary, "HC: Share of women judges", "Share of women judges (High Court) (%, 2017)")
+setnames(judiciary, "jud_exp_per_pop", "Per capita spend on judiciary (Rs, 2015 - 16)")
+#setnames(judiciary, "Expenditure of Administration of Justice (Rs lakh)", "State spend on the judiciary (Rs lakh, 2015-16)")
+setnames(judiciary, "average:jud_exp", "State spend on the judiciary (%, 2011-16)")
+setnames(judiciary, "Average:SC_CCR", "Case clearance rate (Lower Courts) (2012-17)")
+setnames(judiciary, "Average:HC_CCR", "Case clearance rate (High Courts) (2012-17)")
+setnames(judiciary, "Average: HC - pending cases per judge", "Cases pending (High Court judge) (2012-17)")
+setnames(judiciary, "Average: SC - pending cases per judge", "Case pending (Lower Courts judge) (2012-17)")
+setnames(judiciary, "Average: HC: pending cases", "Pendency in High Court (2012-17)")
+setnames(judiciary, "Average: SC: pending cases", "Pendency in Lower Courts (2012-17)")
+setnames(judiciary, "Average:SC_judges_vacancy", "Judge vacancy (Lower court) (2012-17)")
+setnames(judiciary, "Average:HC_judges_vacancy", "Judge vacancy (High court) (2012-17)")
+
+write_xlsx(judiciary, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/Judiciary.xlsx")
+
+
+```
+
+
+```{r}
+
+source_data <- merge(HC_CCR, SC_CCR,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pending_cases,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pendency_highcourt,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pendency_subcourt,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, courthalls,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pop,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, avg_judges, by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, SC_avg_judges, by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, HC_judges,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, SC_judges,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, HC_non_jud,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, sub_court_women,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, HC_women,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, jud_exp,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, state_expend,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pending_SC,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, pending_HC,by = c("States", "Year"), all = TRUE)
+
+write_xlsx(source_data, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/J_source.xlsx")
+
+```
+
+Clustering
+```{r}
+
+judiciary <- judiciary %>% 
+  mutate("Clusters" = case_when(
+    States %in% c("Lakshadweep", "A&N Islands", "Daman & Diu", "D&N Haveli", "Chandigarh", "Puducherry", "Delhi") ~ "Union Territory",
+    States %in% c("Sikkim", "Mizoram", "Arunachal Pradesh", "Goa", "Meghalaya", "Tripura", "Himachal Pradesh") ~ "Small States",
+    States %in% c("Uttarakhand", "Telangana", "Haryana", "Chhattisgarh", "Punjab",  "Jharkhand", "Kerala", "Odisha", "Gujarat", "Karnataka", "Rajasthan", "Tamil Nadu", "Madhya Pradesh", "Andhra Pradesh", "West Bengal", "Bihar", "Maharashtra", "Uttar Pradesh") ~ "Large and Mid States",
+    States %in% c("Manipur", "Jammu & Kashmir", "Assam", "Nagaland") ~ "Conflict States"
+  )) 
+
+```
+
+Latest year
+
+```{r}
+
+Jud_2018 <- judiciary %>% 
+  select("States","Year", "Pendency (5-10 years) (lower court) (%, 2018)",
+         "Pendency (10+ years) (lower court) (%, 2018)"
+         ) %>% 
+  filter(Year==2018)
+
+Jud_2017 <- judiciary %>% 
+  select("States", "Year", "Share of women judges (lower courts) (%, 2017)",
+         "Share of women judges (High Court) (%, 2017)", "High court Pendency (Years, 2017-18)",
+         "Lower court Pendency (Years, 2017-18)",
+         "Courthall shortfall (2016, March '18)") %>% 
+  filter(Year==2017)
+
+Jud_2016 <- judiciary %>% 
+  select("States", "Year", "Population per HC judge (2016-17)", 
+         "Population per Lower Court judge (2016-17)",
+         "High Court judges vacancies (%, 2016-2017)",
+         "Lower Court judges vacancies (%, 2016-17)",
+         "High Court staff vacancy (%, 2016-17)",
+         "Cases pending (High Court judge) (2012-17)",
+         "Case pending (Lower Courts judge) (2012-17)",
+         "Pendency in High Court (2012-17)",
+         "Pendency in Lower Courts (2012-17)",
+         "Judge vacancy (Lower court) (2012-17)",
+         "Judge vacancy (High court) (2012-17)",
+         "Case clearance rate (High Courts) (2016-17)",
+         "Case clearance rate (Lower Courts) (2016-17)",
+         "Case clearance rate (Lower Courts) (2012-17)",
+         "Case clearance rate (High Courts) (2012-17)") %>% 
+  filter(Year==2016)
+
+Jud_2015 <- judiciary %>% 
+  select("States", "Year", "Per capita spend on judiciary (Rs, 2015 - 16)",
+         "budget_comparison",
+         "Clusters") %>% 
+  filter(Year==2015)
+
+judiciary_latest <- left_join(Jud_2018, Jud_2017, by =c("States"))
+judiciary_latest <- left_join(judiciary_latest, Jud_2016, by =c("States"))
+judiciary_latest <- left_join(judiciary_latest, Jud_2015, by =c("States"))
+
+judiciary_latest$Year.x <- NULL
+judiciary_latest$Year.x.x <- NULL
+judiciary_latest$Year.y.y <- NULL
+judiciary_latest$Year.y <- NULL
+
+write_xlsx(judiciary_latest, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/J_latest.xlsx")
+
+```
+
+
+```{r}
+
+judiciary_latest$`Cases pending (High Court judge) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA 
+judiciary_latest$`Case pending (Lower Courts judge) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Pendency in High Court (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Pendency in Lower Courts (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Judge vacancy (Lower court) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Judge vacancy (High court) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Case clearance rate (Lower Courts) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Case clearance rate (High Courts) (2012-17)`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`budget_comparison`[which(judiciary_latest$States == "Telangana")] <- NA
+judiciary_latest$`Courthall shortfall (2016, March '18)`[which(judiciary_latest$States == "Telangana")] <- NA
+
+# Andhra Pradesh
+
+judiciary_latest$`Cases pending (High Court judge) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA 
+judiciary_latest$`Case pending (Lower Courts judge) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Pendency in High Court (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Pendency in Lower Courts (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Judge vacancy (Lower court) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Judge vacancy (High court) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Case clearance rate (Lower Courts) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Case clearance rate (High Courts) (2012-17)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`budget_comparison`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+judiciary_latest$`Courthall shortfall (2016, March '18)`[which(judiciary_latest$States == "Andhra Pradesh")] <- NA
+
+
+#Arunachal Pradesh
+#judiciary_latest$`Pendency (5-10 years) (lower court) (%, 2018)`[which(judiciary_latest$States == "Arunachal Pradesh")] <- "Not available in NJDG"
+#judiciary_latest$`Pendency (10+ years) (lower court) (%, 2018)`[which(judiciary_latest$States == "Arunachal Pradesh")] <- "Not available in NJDG"
+#judiciary_latest$`Share of women judges (lower courts) (%, 2017)`[which(judiciary_latest$States == "Arunachal Pradesh")] <- "Not available"
+#judiciary_latest$`Lower court Pendency (Years, 2017-18)`[which(judiciary_latest$States == "Arunachal Pradesh")] <- "Not available"
+
+#Nagaland
+#judiciary_latest$`Pendency (5-10 years) (lower court) (%, 2018)`[which(judiciary_latest$States == "Nagaland")] <- "Not available in NJDG"
+#judiciary_latest$`Pendency (10+ years) (lower court) (%, 2018)`[which(judiciary_latest$States == "Nagaland")] <- "Not available in NJDG"
+
+#Lakshadweep
+#judiciary_latest$`Share of women judges (lower courts) (%, 2017)`[which(judiciary_latest$States == "Lakshadweep")] <- "Not available"
+#judiciary_latest$`Lower court Pendency (Years, 2017-18)`[which(judiciary_latest$States == "Lakshadweep")] <- "Not available"
+
+#Chandigarh
+#judiciary_latest$`Lower court Pendency (Years, 2017-18)`[which(judiciary_latest$States == "Chandigarh")] <- "Not available"
+
+
+```
+
+EMPTY DATAFRAME
+
+```{r}
+
+#Create an empty dataframe
+judiciary_score <- judiciary_latest #%>% 
+  #filter(Clusters=="Small States" | Clusters == "Large and Mid States")
+judiciary_score[1:25,2:26] <- NA
+judiciary_score[,c("Clusters")] <- list(NULL)
+
+```
+
+Formulae - Scoring
+```{r}
+
+formula_1 <-function(x) {
+  case_when(!is.infinite(x)|!is.na(x)~(((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Higher the better
+
+
+formula_2 <-function(x) {
+  case_when(!(is.infinite(x)|is.na(x))~(((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Lower the better
+
+formula_3 <-function(x) {
+  case_when ( x >= 100 ~ 10,
+              x < 100 ~ (((x - min(x, na.rm = TRUE))*9)/(100- min(x, na.rm = TRUE))) + 1
+    )    } # 100% and higher is better
+
+formula_4 <-function(x) {
+  case_when ( x <= 0 ~ 10,
+              x > 0 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - 0)) + 1)
+        } # 0% and lower is better
+
+formula_5 <-function(x) {
+  case_when ( x >= 0 ~ 10,
+              x < 0 ~ (((x - min(x, na.rm = TRUE))*9)/(0- min(x, na.rm = TRUE))) + 1)
+        } # 0% and higher is better
+
+formula_6 <- function(x){
+  as.numeric(x) # Convert all indicators to numeric
+}
+
+```
+
+Scoring - Prep
+```{r}
+
+fm1_cols <- c("Per capita spend on judiciary (Rs, 2015 - 16)", "Share of women judges (lower courts) (%, 2017)", "Share of women judges (High Court) (%, 2017)", "Case clearance rate (Lower Courts) (2012-17)", "Case clearance rate (High Courts) (2012-17)")
+
+fm2_cols <- c("Population per HC judge (2016-17)", "Population per Lower Court judge (2016-17)",
+              "Judge vacancy (Lower court) (2012-17)", "Judge vacancy (High court) (2012-17)",
+              "High court Pendency (Years, 2017-18)", "Lower court Pendency (Years, 2017-18)", "Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)", "Cases pending (High Court judge) (2012-17)", "Case pending (Lower Courts judge) (2012-17)", "Pendency in High Court (2012-17)", "Pendency in Lower Courts (2012-17)")
+
+fm3_cols <- c("Case clearance rate (High Courts) (2016-17)","Case clearance rate (Lower Courts) (2016-17)")
+
+fm4_cols <- c("Courthall shortfall (2016, March '18)","High Court judges vacancies (%, 2016-2017)", "Lower Court judges vacancies (%, 2016-17)", "High Court staff vacancy (%, 2016-17)")
+
+fm5_cols <- c("budget_comparison")
+
+
+fm6_cols <- c("Per capita spend on judiciary (Rs, 2015 - 16)", "Share of women judges (lower courts) (%, 2017)", "Share of women judges (High Court) (%, 2017)", "Case clearance rate (Lower Courts) (2012-17)", "Case clearance rate (High Courts) (2012-17)","Population per HC judge (2016-17)", "Population per Lower Court judge (2016-17)",
+              "Judge vacancy (Lower court) (2012-17)", "Judge vacancy (High court) (2012-17)",
+              "High court Pendency (Years, 2017-18)", "Lower court Pendency (Years, 2017-18)", "Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)", "Cases pending (High Court judge) (2012-17)", "Case pending (Lower Courts judge) (2012-17)", "Pendency in High Court (2012-17)", "Pendency in Lower Courts (2012-17)", "Case clearance rate (High Courts) (2016-17)","Case clearance rate (Lower Courts) (2016-17)", "Courthall shortfall (2016, March '18)","High Court judges vacancies (%, 2016-2017)", "Lower Court judges vacancies (%, 2016-17)", "High Court staff vacancy (%, 2016-17)", "budget_comparison" )
+ 
+judiciary_latest[fm6_cols] <- lapply(judiciary_latest[fm6_cols], formula_6)
+
+```
+
+Scoring - overall
+```{r}
+
+judiciary_score[fm1_cols] <- lapply(judiciary_latest[fm1_cols], formula_1)
+judiciary_score[fm2_cols] <- lapply(judiciary_latest[fm2_cols], formula_2)
+judiciary_score[fm3_cols] <- lapply(judiciary_latest[fm3_cols], formula_3)
+judiciary_score[fm4_cols] <- lapply(judiciary_latest[fm4_cols], formula_4)
+judiciary_score[fm5_cols] <- lapply(judiciary_latest[fm5_cols], formula_5)
+
+```
+
+Cluster - Scoring
+```{r}
+
+jud_latest_mid_large <- judiciary_latest %>% 
+  filter(Clusters == "Large and Mid States")
+
+jud_latest_small <- judiciary_latest %>% 
+  filter(Clusters == "Small States")
+
+jud_latest_CS <- judiciary_latest %>% 
+  filter(Clusters == "Conflict States")
+
+jud_latest_UT <- judiciary_latest %>% 
+  filter(Clusters == "Union Territory")
+
+
+```
+
+
+Cluster Scoring- STATES
+
+* Andhra Pradesh and Telangana - trends in judiciary expenditure - values are skewed - For Telangana, figures for Andhra Pradesh's is taken until 2013. And there's a drop in Andhra's figures post 2013. So, there's a drop in 5 year average)
+
+* Arunachal Pradesh scored a 10, the highest in five year trends in judiciary's expenditure. Its 'other expenditure' in last two years, ballooned to 10 crores and 20 crores from Rs 1 crore in 2013-2014.
+
+CLuster Scoring - Small states
+
+```{r}
+
+jud_small_score <- jud_latest_small
+jud_small_score[1:7,2:26] <- NA
+jud_small_score[,c("Clusters")] <- list(NULL)
+jud_small_score[fm1_cols] <- lapply(jud_latest_small[fm1_cols], formula_1)
+jud_small_score[fm2_cols] <- lapply(jud_latest_small[fm2_cols], formula_2)
+jud_small_score[fm3_cols] <- lapply(jud_latest_small[fm3_cols], formula_3)
+jud_small_score[fm4_cols] <- lapply(jud_latest_small[fm4_cols], formula_4)
+jud_small_score[fm5_cols] <- lapply(jud_latest_small[fm5_cols], formula_5)
+
+```
+
+CLuster Scoring -large and mid states
+
+```{r}
+
+jud_large_mid_score <- jud_latest_mid_large
+jud_large_mid_score[1:18,2:26] <- NA
+jud_large_mid_score[,c("Clusters")] <- list(NULL)
+jud_large_mid_score[fm1_cols] <- lapply(jud_latest_mid_large[fm1_cols], formula_1)
+jud_large_mid_score[fm2_cols] <- lapply(jud_latest_mid_large[fm2_cols], formula_2)
+jud_large_mid_score[fm3_cols] <- lapply(jud_latest_mid_large[fm3_cols], formula_3)
+jud_large_mid_score[fm4_cols] <- lapply(jud_latest_mid_large[fm4_cols], formula_4)
+jud_large_mid_score[fm5_cols] <- lapply(jud_latest_mid_large[fm5_cols], formula_5)
+
+```
+
+UTs
+```{r}
+
+jud_UT_score <- jud_latest_UT
+jud_UT_score[1:7,2:26] <- NA
+jud_UT_score[,c("Clusters")] <- list(NULL)
+jud_UT_score[fm1_cols] <- lapply(jud_latest_UT[fm1_cols], formula_1)
+jud_UT_score[fm2_cols] <- lapply(jud_latest_UT[fm2_cols], formula_2)
+jud_UT_score[fm3_cols] <- lapply(jud_latest_UT[fm3_cols], formula_3)
+jud_UT_score[fm4_cols] <- lapply(jud_latest_UT[fm4_cols], formula_4)
+jud_UT_score[fm5_cols] <- lapply(jud_latest_UT[fm5_cols], formula_5)
+
+
+```
+
+
+Conflict States
+```{r}
+
+jud_CS_score <- jud_latest_CS
+jud_CS_score[1:4,2:26] <- NA
+jud_CS_score[,c("Clusters")] <- list(NULL)
+jud_CS_score[fm1_cols] <- lapply(jud_latest_CS[fm1_cols], formula_1)
+jud_CS_score[fm2_cols] <- lapply(jud_latest_CS[fm2_cols], formula_2)
+jud_CS_score[fm3_cols] <- lapply(jud_latest_CS[fm3_cols], formula_3)
+jud_CS_score[fm4_cols] <- lapply(jud_latest_CS[fm4_cols], formula_4)
+jud_CS_score[fm5_cols] <- lapply(jud_latest_CS[fm5_cols], formula_5)
+
+
+
+
+```
+
+
+
+ADD BENCHMARK ROW
+
+Large and mid states
+```{r}
+
+jud_large_mid_score <- jud_large_mid_score %>% 
+  add_row(States = "Benchmark", 
+          `Pendency (5-10 years) (lower court) (%, 2018)` = "Lower the better",                    
+          `Pendency (10+ years) (lower court) (%, 2018)` = "Lower the better",
+          `Share of women judges (lower courts) (%, 2017)` = "Higher the better",                                   
+          `Share of women judges (High Court) (%, 2017)` = "Higher the better",                                        
+          `High court Pendency (Years, 2017-18)` = "Lower the better",                                         
+          `Lower court Pendency (Years, 2017-18)` = "Lower the better",                                 
+          `Courthall shortfall (2016, March '18)` ="0 and below gets a 10, values above 0 get scored as per lower the better rule",             `Population per HC judge (2016-17)` = "Lower the better",                                                      
+          `Population per Lower Court judge (2016-17)` = "Lower the better",                                       
+          `High Court judges vacancies (%, 2016-2017)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",             `Lower Court judges vacancies (%, 2016-17)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",    
+          `High Court staff vacancy (%, 2016-17)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",    
+          `Case clearance rate (High Courts) (2016-17)`= "100% and above gets 10, values below 100% get scored as per higher the better rule",    `Case clearance rate (Lower Courts) (2016-17)` = "100% and above gets 10, values below 100% get scored as per higher the better rule", 
+          `Case clearance rate (High Courts) (2012-17)` = "Higher the better",               
+`Case clearance rate (Lower Courts) (2012-17)` = "Higher the better",                      
+`Cases pending (High Court judge) (2012-17)` = "Lower the better",                               
+`Case pending (Lower Courts judge) (2012-17)` = "Lower the better",                         
+`Pendency in High Court (2012-17)` = "Lower the better",                                           
+`Pendency in Lower Courts (2012-17)` = "Lower the better",                                    
+`Judge vacancy (Lower court) (2012-17)` = "Lower the better",                      
+`Judge vacancy (High court) (2012-17)` = "Lower the better",                               
+`Per capita spend on judiciary (Rs, 2015 - 16)` = "Higher the better",                                        
+`budget_comparison` = "0 and above gets a 10, below 0 gets scored as per higher the better rule")
+
+
+
+```
+
+Add theme row
+
+```{r}
+
+jud_large_mid_score <- jud_large_mid_score %>% 
+  add_row(States = "Theme", 
+          `Pendency (5-10 years) (lower court) (%, 2018)` = "Workload",                    
+          `Pendency (10+ years) (lower court) (%, 2018)` = "Workload",
+          `Share of women judges (lower courts) (%, 2017)` = "Diversity",                                   
+          `Share of women judges (High Court) (%, 2017)` = "Diversity",                                        
+          `High court Pendency (Years, 2017-18)` = "Workload",                                         
+          `Lower court Pendency (Years, 2017-18)` = "Workload",                                 
+          `Courthall shortfall (2016, March '18)` ="Infrastructure",             
+          `Population per HC judge (2016-17)` = "Human Resources",                                                      
+          `Population per Lower Court judge (2016-17)` = "Human Resources",                                       
+          `High Court judges vacancies (%, 2016-2017)` = "Human Resources",             
+          `Lower Court judges vacancies (%, 2016-17)` = "Human Resources",    
+          `High Court staff vacancy (%, 2016-17)` = "Human Resources",    
+          `Case clearance rate (High Courts) (2016-17)`= "Workload",    
+          `Case clearance rate (Lower Courts) (2016-17)` = "Workload", 
+          `Case clearance rate (High Courts) (2012-17)` = "Trend",               
+`Case clearance rate (Lower Courts) (2012-17)` = "Trend",                      
+`Cases pending (High Court judge) (2012-17)` = "Trend",                               
+`Case pending (Lower Courts judge) (2012-17)` = "Trend",                         
+`Pendency in High Court (2012-17)` = "Trend",                                           
+`Pendency in Lower Courts (2012-17)` = "Trend",                                    
+`Judge vacancy (Lower court) (2012-17)` = "Trend",                      
+`Judge vacancy (High court) (2012-17)` = "Trend",                               
+`Per capita spend on judiciary (Rs, 2015 - 16)` = "Budget",                                        
+`budget_comparison` = "Budget")
+
+
+
+```
+
+Small states
+Add Benchmark Row
+```{r}
+
+jud_small_score <- jud_small_score %>% 
+  add_row(States = "Benchmark", 
+          `Pendency (5-10 years) (lower court) (%, 2018)` = "Lower the better",                    
+          `Pendency (10+ years) (lower court) (%, 2018)` = "Lower the better",
+          `Share of women judges (lower courts) (%, 2017)` = "Higher the better",                                   
+          `Share of women judges (High Court) (%, 2017)` = "Higher the better",                                        
+          `High court Pendency (Years, 2017-18)` = "Lower the better",                                         
+          `Lower court Pendency (Years, 2017-18)` = "Lower the better",                                 
+          `Courthall shortfall (2016, March '18)` ="0 and below gets a 10, values above 0 get scored as per lower the better rule",             `Population per HC judge (2016-17)` = "Lower the better",                                                      
+          `Population per Lower Court judge (2016-17)` = "Lower the better",                                       
+          `High Court judges vacancies (%, 2016-2017)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",             `Lower Court judges vacancies (%, 2016-17)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",    
+          `High Court staff vacancy (%, 2016-17)` = "0 and below gets a 10, values above 0 get scored as per lower the better rule",    
+          `Case clearance rate (High Courts) (2016-17)`= "100% and above gets 10, values below 100% get scored as per higher the better rule",    `Case clearance rate (Lower Courts) (2016-17)` = "100% and above gets 10, values below 100% get scored as per higher the better rule", 
+          `Case clearance rate (High Courts) (2012-17)` = "Higher the better",               
+`Case clearance rate (Lower Courts) (2012-17)` = "Higher the better",                      
+`Cases pending (High Court judge) (2012-17)` = "Lower the better",                               
+`Case pending (Lower Courts judge) (2012-17)` = "Lower the better",                         
+`Pendency in High Court (2012-17)` = "Lower the better",                                           
+`Pendency in Lower Courts (2012-17)` = "Lower the better",                                    
+`Judge vacancy (Lower court) (2012-17)` = "Lower the better",                      
+`Judge vacancy (High court) (2012-17)` = "Lower the better",                               
+`Per capita spend on judiciary (Rs, 2015 - 16)` = "Higher the better",                                        
+`budget_comparison` = "0 and above gets a 10, below 0 gets scored as per higher the better rule")
+
+```
+
+
+Add Theme Row
+```{r}
+
+jud_small_score <- jud_small_score %>% 
+  add_row(States = "Theme", 
+          `Pendency (5-10 years) (lower court) (%, 2018)` = "Workload",                    
+          `Pendency (10+ years) (lower court) (%, 2018)` = "Workload",
+          `Share of women judges (lower courts) (%, 2017)` = "Diversity",                                   
+          `Share of women judges (High Court) (%, 2017)` = "Diversity",                                        
+          `High court Pendency (Years, 2017-18)` = "Workload",                                         
+          `Lower court Pendency (Years, 2017-18)` = "Workload",                                 
+          `Courthall shortfall (2016, March '18)` ="Infrastructure",             
+          `Population per HC judge (2016-17)` = "Human Resources",                                                      
+          `Population per Lower Court judge (2016-17)` = "Human Resources",                                       
+          `High Court judges vacancies (%, 2016-2017)` = "Human Resources",             
+          `Lower Court judges vacancies (%, 2016-17)` = "Human Resources",    
+          `High Court staff vacancy (%, 2016-17)` = "Human Resources",    
+          `Case clearance rate (High Courts) (2016-17)`= "Workload",    
+          `Case clearance rate (Lower Courts) (2016-17)` = "Workload", 
+          `Case clearance rate (High Courts) (2012-17)` = "Trend",               
+`Case clearance rate (Lower Courts) (2012-17)` = "Trend",                      
+`Cases pending (High Court judge) (2012-17)` = "Trend",                               
+`Case pending (Lower Courts judge) (2012-17)` = "Trend",                         
+`Pendency in High Court (2012-17)` = "Trend",                                           
+`Pendency in Lower Courts (2012-17)` = "Trend",                                    
+`Judge vacancy (Lower court) (2012-17)` = "Trend",                      
+`Judge vacancy (High court) (2012-17)` = "Trend",                               
+`Per capita spend on judiciary (Rs, 2015 - 16)` = "Budget",                                        
+`budget_comparison` = "Budget")
+
+```
+
+Formulae
+
+```{r}
+
+jud_formula <- jud_small_score %>% 
+  add_row(States = "formula", 
+          `Pendency (5-10 years) (lower court) (%, 2018)` = "cases pending between 5-10 years/total pending cases",                    
+          `Pendency (10+ years) (lower court) (%, 2018)` = "cases pending above 10 years/total pending cases",
+          `Share of women judges (lower courts) (%, 2017)` = "total sub court women judges/total judges",                                   
+          `Share of women judges (High Court) (%, 2017)` = "total high court women judges/total judges",                                        
+          `High court Pendency (Years, 2017-18)` = "used as is from data shared by Daksh",                                         
+          `Lower court Pendency (Years, 2017-18)` = "used as is from data shared by Daksh",                                 
+          `Courthall shortfall (2016, March '18)` ="sanctioned subordinate court judges(2016-17)/total courtrooms(Mar'2018)",             
+          `Population per HC judge (2016-17)` = "population (source: PCA)/actual high court judges",                                              
+          `Population per Lower Court judge (2016-17)` = "population (source: PCA)/actual high court judges",                                                `High Court judges vacancies (%, 2016-2017)` = "100-((actual high court judges/sanctioned high court judges)*100)",             
+          `Lower Court judges vacancies (%, 2016-17)` = "100-((actual sub court judges/sanctioned sub court judges)*100)",    
+          `High Court staff vacancy (%, 2016-17)` = "100-((actual high court staff/sanctioned high court staff)*100)",    
+          `Case clearance rate (High Courts) (2016-17)`= "(cases disposed(civil+criminal)/cases filed(civil+criminal))*100",    
+          `Case clearance rate (Lower Courts) (2016-17)` = "(cases disposed(civil+criminal)/cases filed(civil+criminal))*100", 
+          `Case clearance rate (High Courts) (2012-17)` = "five year average of annual change in clearance rates",               
+`Case clearance rate (Lower Courts) (2012-17)` = "five year average of annual change in clearance rates",                      
+`Cases pending (High Court judge) (2012-17)` = "five year average of annual change in average pending cases (civil+criminal) per high court judge", `Case pending (Lower Courts judge) (2012-17)` = "five year average of annual change in average pending cases (civil+criminal) per lower court judge",                      
+`Pendency in High Court (2012-17)` = "five year average of annual change in avg pending cases(Criminal+civil)",                                   `Pendency in Lower Courts (2012-17)` = "five year average of annual change in avg pending cases(Criminal+civil)",                                 `Judge vacancy (Lower court) (2012-17)` = "five year average of annual change in judge vacancies",                      
+`Judge vacancy (High court) (2012-17)` = "five year average of annual change in judge vacancies",                               
+`Per capita spend on judiciary (Rs, 2015 - 16)` = "judiciary expenditure/population",                                        
+`budget_comparison` = "five year average annual change in pillar expenditure-five year average annual change in state expenditure")
+
+```
+
+
+```{r}
+
+sheets <- list("Source data" =  source_data, "Derived data yearwise" = judiciary ,"Derived Data latest" = judiciary_latest, "formulae" = jud_formula ,"Small states" = jud_small_score, "Large and mid states" = jud_large_mid_score, "Conflict states" = jud_CS_score, "UTs" = jud_UT_score)
+write_xlsx(sheets, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Judiciary/Judiciary_sheet.xlsx")
+
+```
+
+For design
+
+```{r}
+
+sheets1 <- list("Derived Data latest" = judiciary_latest, "judiciary_score" = judiciary_score, "Small states" = jud_small_score, "Large and mid states" = jud_large_mid_score)
+write_xlsx(sheets1, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Web design/Judiciary_sheet_design.xlsx")
+
+```
+
+
+```{r}
+colnames(judiciary_latest)
+```
+
+
+
+
+
+```{r}
+
+library(reshape2)
+
+jud_m <- melt(judiciary_latest, id.vars = c("States", "Clusters"), measure.vars = c("Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)",   "Share of women judges (lower courts) (%, 2017)",
+"Share of women judges (High Court) (%, 2017)",   "High court Pendency (Years, 2017-18)" ,         
+"Lower court Pendency (Years, 2017-18)",          "Courthall shortfall (2016, March '18)"  ,       
+"Population per HC judge (2016-17)",              "Population per Lower Court judge (2016-17)"    ,
+"High Court judges vacancies (%, 2016-2017)",     "Lower Court judges vacancies (%, 2016-17)"     ,
+"High Court staff vacancy (%, 2016-17)",          "Cases pending (High Court judge) (2012-17)"    ,
+"Case pending (Lower Courts judge) (2012-17)" ,   "Pendency in High Court (2012-17)"              ,
+"Pendency in Lower Courts (2012-17)"          ,   "Judge vacancy (Lower court) (2012-17)"         ,
+"Judge vacancy (High court) (2012-17)"         ,  "Case clearance rate (High Courts) (2016-17)"   ,
+"Case clearance rate (Lower Courts) (2016-17)"  , "Case clearance rate (Lower Courts) (2012-17)"  ,
+"Case clearance rate (High Courts) (2012-17)"   , "Per capita spend on judiciary (Rs, 2015 - 16)" ,
+"budget_comparison"))
+
+jud_score_lm <- melt(jud_large_mid_score, id.vars = c("States"), measure.vars = c("Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)",   "Share of women judges (lower courts) (%, 2017)",
+"Share of women judges (High Court) (%, 2017)",   "High court Pendency (Years, 2017-18)" ,         
+"Lower court Pendency (Years, 2017-18)",          "Courthall shortfall (2016, March '18)"  ,       
+"Population per HC judge (2016-17)",              "Population per Lower Court judge (2016-17)"    ,
+"High Court judges vacancies (%, 2016-2017)",     "Lower Court judges vacancies (%, 2016-17)"     ,
+"High Court staff vacancy (%, 2016-17)",          "Cases pending (High Court judge) (2012-17)"    ,
+"Case pending (Lower Courts judge) (2012-17)" ,   "Pendency in High Court (2012-17)"              ,
+"Pendency in Lower Courts (2012-17)"          ,   "Judge vacancy (Lower court) (2012-17)"         ,
+"Judge vacancy (High court) (2012-17)"         ,  "Case clearance rate (High Courts) (2016-17)"   ,
+"Case clearance rate (Lower Courts) (2016-17)"  , "Case clearance rate (Lower Courts) (2012-17)"  ,
+"Case clearance rate (High Courts) (2012-17)"   , "Per capita spend on judiciary (Rs, 2015 - 16)" ,
+"budget_comparison"))
+
+colnames(jud_score_lm)[3] <- "score"
+
+jud_m_low <- jud_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+jud_m_high <- jud_m %>% 
+  filter(Clusters =="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+jud_m_mid_large <- jud_m %>% 
+  filter(Clusters=="Large and Mid States")
+
+jud_m_mid_large <- left_join(jud_m_mid_large, jud_m_high, by = "variable") 
+jud_m_mid_large <- left_join(jud_m_mid_large, jud_m_low, by = "variable")
+
+
+# FOR LARGE AND MID STATES
+
+jud_m_mid_large <- jud_m_mid_large %>% 
+  mutate("Themes" = case_when(
+   variable == "Pendency (5-10 years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ "Diversity",
+    variable == "Share of women judges (High Court) (%, 2017)" ~ "Diversity",
+    variable == "High court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Lower court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Courthall shortfall (2016, March '18)" ~ "Infrastructure",
+    variable == "Population per HC judge (2016-17)" ~ "Human Resources",
+    variable == "Population per Lower Court judge (2016-17)" ~ "Human Resources" ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ "Human Resources" ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ "Human Resources",
+    variable == "High Court staff vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cases pending (High Court judge) (2012-17)" ~ "Trends",
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ "Trends" ,
+    variable == "Pendency in High Court (2012-17)" ~ "Trends",
+    variable == "Pendency in Lower Courts (2012-17)" ~ "Trends" ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ "Trends",
+    variable == "Judge vacancy (High court) (2012-17)" ~ "Trends",
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ "Workload" ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ "Workload",
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ "Trends",
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ "Trends",
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ "Trends" ,
+    variable == "budget_comparison" ~ "Trends")) %>% 
+  mutate("worst value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Pendency (5-10 years) (lower court) (%, 2018)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Pendency (10+ years) (lower court) (%, 2018)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_mid_large$States=="Punjab")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="High court Pendency (Years, 2017-18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Courthall shortfall (2016, March '18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Population per HC judge (2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Population per Lower Court judge (2016-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="High Court judges vacancies (%, 2016-2017)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Lower Court judges vacancies (%, 2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="High Court staff vacancy (%, 2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Cases pending (High Court judge) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Case pending (Lower Courts judge) (2012-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Pendency in High Court (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Pendency in Lower Courts (2012-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Judge vacancy (High court) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Case clearance rate (High Courts) (2016-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Case clearance rate (Lower Courts) (2016-17)"&jud_m_mid_large$States=="Punjab")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Case clearance rate (Lower Courts) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Case clearance rate (High Courts) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Per capita spend on judiciary (Rs, 2015 - 16)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "budget_comparison" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="budget_comparison"&jud_m_mid_large$States=="Punjab")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Pendency (5-10 years) (lower court) (%, 2018)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Pendency (10+ years) (lower court) (%, 2018)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_mid_large$States=="Punjab")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="High court Pendency (Years, 2017-18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Courthall shortfall (2016, March '18)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Population per HC judge (2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Population per Lower Court judge (2016-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="High Court judges vacancies (%, 2016-2017)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Lower Court judges vacancies (%, 2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="High Court staff vacancy (%, 2016-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Cases pending (High Court judge) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Case pending (Lower Courts judge) (2012-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Pendency in High Court (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Pendency in Lower Courts (2012-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_mid_large$lowvalue[which(jud_m_mid_large$variable =="Judge vacancy (High court) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Case clearance rate (High Courts) (2016-17)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Case clearance rate (Lower Courts) (2016-17)"&jud_m_mid_large$States=="Punjab")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Case clearance rate (Lower Courts) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Case clearance rate (High Courts) (2012-17)"&jud_m_mid_large$States=="Punjab")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="Per capita spend on judiciary (Rs, 2015 - 16)"&jud_m_mid_large$States=="Punjab")] ,
+    variable == "budget_comparison" ~ jud_m_mid_large$highvalue[which(jud_m_mid_large$variable =="budget_comparison"&jud_m_mid_large$States=="Punjab")]))
+
+jud_m_mid_large <- left_join(jud_m_mid_large,jud_score_lm,by=c("States", "variable"))
+
+jud_m_mid_large <- jud_m_mid_large %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+  
+    
+```
+
+For Small States
+
+```{r}
+
+jud_m_low1 <- jud_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+jud_m_high1 <- jud_m %>% 
+  filter(Clusters =="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+jud_m_small <- jud_m %>% 
+  filter(Clusters=="Small States")
+
+jud_m_small <- left_join(jud_m_small, jud_m_high1, by = "variable") 
+jud_m_small <- left_join(jud_m_small, jud_m_low1, by = "variable")
+
+jud_score_small <- melt(jud_small_score, id.vars = c("States"), measure.vars = c("Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)",   "Share of women judges (lower courts) (%, 2017)",
+"Share of women judges (High Court) (%, 2017)",   "High court Pendency (Years, 2017-18)" ,         
+"Lower court Pendency (Years, 2017-18)",          "Courthall shortfall (2016, March '18)"  ,       
+"Population per HC judge (2016-17)",              "Population per Lower Court judge (2016-17)"    ,
+"High Court judges vacancies (%, 2016-2017)",     "Lower Court judges vacancies (%, 2016-17)"     ,
+"High Court staff vacancy (%, 2016-17)",          "Cases pending (High Court judge) (2012-17)"    ,
+"Case pending (Lower Courts judge) (2012-17)" ,   "Pendency in High Court (2012-17)"              ,
+"Pendency in Lower Courts (2012-17)"          ,   "Judge vacancy (Lower court) (2012-17)"         ,
+"Judge vacancy (High court) (2012-17)"         ,  "Case clearance rate (High Courts) (2016-17)"   ,
+"Case clearance rate (Lower Courts) (2016-17)"  , "Case clearance rate (Lower Courts) (2012-17)"  ,
+"Case clearance rate (High Courts) (2012-17)"   , "Per capita spend on judiciary (Rs, 2015 - 16)" ,
+"budget_comparison"))
+
+colnames(jud_score_small)[3] <- "score"
+
+jud_m_small <- jud_m_small %>% 
+  mutate("Themes" = case_when(
+   variable == "Pendency (5-10 years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ "Diversity",
+    variable == "Share of women judges (High Court) (%, 2017)" ~ "Diversity",
+    variable == "High court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Lower court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Courthall shortfall (2016, March '18)" ~ "Infrastructure",
+    variable == "Population per HC judge (2016-17)" ~ "Human Resources",
+    variable == "Population per Lower Court judge (2016-17)" ~ "Human Resources" ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ "Human Resources" ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ "Human Resources",
+    variable == "High Court staff vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cases pending (High Court judge) (2012-17)" ~ "Trends",
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ "Trends" ,
+    variable == "Pendency in High Court (2012-17)" ~ "Trends",
+    variable == "Pendency in Lower Courts (2012-17)" ~ "Trends" ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ "Trends",
+    variable == "Judge vacancy (High court) (2012-17)" ~ "Trends",
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ "Workload" ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ "Workload",
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ "Trends",
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ "Trends",
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ "Trends" ,
+    variable == "budget_comparison" ~ "Trends"))
+
+jud_m_small <- jud_m_small %>%   
+      mutate("Best value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_small$lowvalue[which(jud_m_small$variable =="Pendency (5-10 years) (lower court) (%, 2018)" &jud_m_small$States=="Goa")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Pendency (10+ years) (lower court) (%, 2018)" &jud_m_small$States=="Goa")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_small$States=="Goa")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_small$States=="Goa")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="High court Pendency (Years, 2017-18)"&jud_m_small$States=="Goa")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_small$States=="Goa")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Courthall shortfall (2016, March '18)"&jud_m_small$States=="Goa")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Population per HC judge (2016-17)"&jud_m_small$States=="Goa")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Population per Lower Court judge (2016-17)"&jud_m_small$States=="Goa")] ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="High Court judges vacancies (%, 2016-2017)"&jud_m_small$States=="Goa")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Lower Court judges vacancies (%, 2016-17)"&jud_m_small$States=="Goa")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="High Court staff vacancy (%, 2016-17)"&jud_m_small$States=="Goa")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Cases pending (High Court judge) (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Case pending (Lower Courts judge) (2012-17)"&jud_m_small$States=="Goa")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Pendency in High Court (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Pendency in Lower Courts (2012-17)"&jud_m_small$States=="Goa")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Judge vacancy (High court) (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Case clearance rate (High Courts) (2016-17)"&jud_m_small$States=="Goa")] ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Case clearance rate (Lower Courts) (2016-17)"&jud_m_small$States=="Goa")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Case clearance rate (Lower Courts) (2012-17)"&jud_m_small$States=="Goa")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Case clearance rate (High Courts) (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Per capita spend on judiciary (Rs, 2015 - 16)"&jud_m_small$States=="Goa")] ,
+    variable == "budget_comparison" ~ jud_m_small$highvalue[which(jud_m_small$variable =="budget_comparison"&jud_m_small$States=="Goa")]))
+
+
+jud_m_small <- jud_m_small %>% 
+  mutate("worst value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_small$highvalue[which(jud_m_small$variable =="Pendency (5-10 years) (lower court) (%, 2018)"&jud_m_small$States=="Goa")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Pendency (10+ years) (lower court) (%, 2018)"&jud_m_small$States=="Goa")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_small$States=="Goa")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_small$States=="Goa")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="High court Pendency (Years, 2017-18)"&jud_m_small$States=="Goa")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_small$States=="Goa")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Courthall shortfall (2016, March '18)" &jud_m_small$States=="Goa")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Population per HC judge (2016-17)"&jud_m_small$States=="Goa")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Population per Lower Court judge (2016-17)" &jud_m_small$States=="Goa")],
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="High Court judges vacancies (%, 2016-2017)" &jud_m_small$States=="Goa")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Lower Court judges vacancies (%, 2016-17)" &jud_m_small$States=="Goa")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="High Court staff vacancy (%, 2016-17)" &jud_m_small$States=="Goa")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Cases pending (High Court judge) (2012-17)" &jud_m_small$States=="Goa")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Case pending (Lower Courts judge) (2012-17)" &jud_m_small$States=="Goa")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Pendency in High Court (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Pendency in Lower Courts (2012-17)"&jud_m_small$States=="Goa")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_small$States=="Goa")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_small$highvalue[which(jud_m_small$variable =="Judge vacancy (High court) (2012-17)" &jud_m_small$States=="Goa")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Case clearance rate (High Courts) (2016-17)"& jud_m_small$States=="Goa")],
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Case clearance rate (Lower Courts) (2016-17)" &jud_m_small$States=="Goa")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Case clearance rate (Lower Courts) (2012-17)" &jud_m_small$States=="Goa")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Case clearance rate (High Courts) (2012-17)" &jud_m_small$States=="Goa")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="Per capita spend on judiciary (Rs, 2015 - 16)" &jud_m_small$States=="Goa")],
+    variable == "budget_comparison" ~ jud_m_small$lowvalue[which(jud_m_small$variable =="budget_comparison"&jud_m_small$States=="Goa")]))
+    
+
+jud_m_small <- left_join(jud_m_small,jud_score_small,by=c("States", "variable"))
+
+jud_m_small <- jud_m_small %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+
+For UTs
+```{r}
+
+jud_m_low2 <- jud_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+jud_m_high2 <- jud_m %>% 
+  filter(Clusters =="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+jud_m_UT <- jud_m %>% 
+  filter(Clusters=="Union Territory")
+
+jud_m_UT <- left_join(jud_m_UT, jud_m_high2, by = "variable") 
+jud_m_UT <- left_join(jud_m_UT, jud_m_low2, by = "variable")
+
+jud_score_UT <- melt(jud_UT_score, id.vars = c("States"), measure.vars = c("Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)",   "Share of women judges (lower courts) (%, 2017)",
+"Share of women judges (High Court) (%, 2017)",   "High court Pendency (Years, 2017-18)" ,         
+"Lower court Pendency (Years, 2017-18)",          "Courthall shortfall (2016, March '18)"  ,       
+"Population per HC judge (2016-17)",              "Population per Lower Court judge (2016-17)"    ,
+"High Court judges vacancies (%, 2016-2017)",     "Lower Court judges vacancies (%, 2016-17)"     ,
+"High Court staff vacancy (%, 2016-17)",          "Cases pending (High Court judge) (2012-17)"    ,
+"Case pending (Lower Courts judge) (2012-17)" ,   "Pendency in High Court (2012-17)"              ,
+"Pendency in Lower Courts (2012-17)"          ,   "Judge vacancy (Lower court) (2012-17)"         ,
+"Judge vacancy (High court) (2012-17)"         ,  "Case clearance rate (High Courts) (2016-17)"   ,
+"Case clearance rate (Lower Courts) (2016-17)"  , "Case clearance rate (Lower Courts) (2012-17)"  ,
+"Case clearance rate (High Courts) (2012-17)"   , "Per capita spend on judiciary (Rs, 2015 - 16)" ,
+"budget_comparison"))
+
+colnames(jud_score_UT)[3] <- "score"
+
+
+jud_m_UT <- jud_m_UT %>% 
+  mutate("Themes" = case_when(
+   variable == "Pendency (5-10 years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ "Diversity",
+    variable == "Share of women judges (High Court) (%, 2017)" ~ "Diversity",
+    variable == "High court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Lower court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Courthall shortfall (2016, March '18)" ~ "Infrastructure",
+    variable == "Population per HC judge (2016-17)" ~ "Human Resources",
+    variable == "Population per Lower Court judge (2016-17)" ~ "Human Resources" ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ "Human Resources" ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ "Human Resources",
+    variable == "High Court staff vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cases pending (High Court judge) (2012-17)" ~ "Trends",
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ "Trends" ,
+    variable == "Pendency in High Court (2012-17)" ~ "Trends",
+    variable == "Pendency in Lower Courts (2012-17)" ~ "Trends" ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ "Trends",
+    variable == "Judge vacancy (High court) (2012-17)" ~ "Trends",
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ "Workload" ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ "Workload",
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ "Trends",
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ "Trends",
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ "Trends" ,
+    variable == "budget_comparison" ~ "Trends"))
+
+jud_m_UT <- jud_m_UT %>%   
+      mutate("Best value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Pendency (5-10 years) (lower court) (%, 2018)" &jud_m_UT$States=="Puducherry")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Pendency (10+ years) (lower court) (%, 2018)" &jud_m_UT$States=="Puducherry")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_UT$States=="Puducherry")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_UT$States=="Puducherry")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="High court Pendency (Years, 2017-18)"&jud_m_UT$States=="Puducherry")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_UT$States=="Puducherry")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Courthall shortfall (2016, March '18)"&jud_m_UT$States=="Puducherry")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Population per HC judge (2016-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Population per Lower Court judge (2016-17)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="High Court judges vacancies (%, 2016-2017)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Lower Court judges vacancies (%, 2016-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="High Court staff vacancy (%, 2016-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Cases pending (High Court judge) (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Case pending (Lower Courts judge) (2012-17)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Pendency in High Court (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Pendency in Lower Courts (2012-17)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Judge vacancy (High court) (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Case clearance rate (High Courts) (2016-17)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Case clearance rate (Lower Courts) (2016-17)"&jud_m_UT$States=="Puducherry")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Case clearance rate (Lower Courts) (2012-17)"&jud_m_UT$States=="Puducherry")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Case clearance rate (High Courts) (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Per capita spend on judiciary (Rs, 2015 - 16)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "budget_comparison" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="budget_comparison"&jud_m_UT$States=="Puducherry")]))
+
+
+jud_m_UT <- jud_m_UT %>% 
+  mutate("worst value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Pendency (5-10 years) (lower court) (%, 2018)"&jud_m_UT$States=="Puducherry")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Pendency (10+ years) (lower court) (%, 2018)"&jud_m_UT$States=="Puducherry")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_UT$States=="Puducherry")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_UT$States=="Puducherry")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="High court Pendency (Years, 2017-18)"&jud_m_UT$States=="Puducherry")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_UT$States=="Puducherry")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Courthall shortfall (2016, March '18)" &jud_m_UT$States=="Puducherry")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Population per HC judge (2016-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Population per Lower Court judge (2016-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="High Court judges vacancies (%, 2016-2017)" &jud_m_UT$States=="Puducherry")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Lower Court judges vacancies (%, 2016-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="High Court staff vacancy (%, 2016-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Cases pending (High Court judge) (2012-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Case pending (Lower Courts judge) (2012-17)" &jud_m_UT$States=="Puducherry")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Pendency in High Court (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Pendency in Lower Courts (2012-17)"&jud_m_UT$States=="Puducherry")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_UT$States=="Puducherry")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_UT$highvalue[which(jud_m_UT$variable =="Judge vacancy (High court) (2012-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Case clearance rate (High Courts) (2016-17)"& jud_m_UT$States=="Puducherry")],
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Case clearance rate (Lower Courts) (2016-17)" &jud_m_UT$States=="Puducherry")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Case clearance rate (Lower Courts) (2012-17)" &jud_m_UT$States=="Puducherry")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Case clearance rate (High Courts) (2012-17)" &jud_m_UT$States=="Puducherry")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="Per capita spend on judiciary (Rs, 2015 - 16)" &jud_m_UT$States=="Puducherry")],
+    variable == "budget_comparison" ~ jud_m_UT$lowvalue[which(jud_m_UT$variable =="budget_comparison"&jud_m_UT$States=="Puducherry")]))
+
+jud_m_UT <- left_join(jud_m_UT,jud_score_UT,by=c("States", "variable"))
+
+jud_m_UT <- jud_m_UT %>% 
+  group_by(variable) %>% 
+ mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+For Conflict States
+```{r}
+
+jud_m_low3 <- jud_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+jud_m_high3 <- jud_m %>% 
+  filter(Clusters =="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+jud_m_CS <- jud_m %>% 
+  filter(Clusters=="Conflict States")
+
+jud_m_CS <- left_join(jud_m_CS, jud_m_high3, by = "variable") 
+jud_m_CS <- left_join(jud_m_CS, jud_m_low3, by = "variable")
+
+jud_score_CS <- melt(jud_CS_score, id.vars = c("States"), measure.vars = c("Pendency (5-10 years) (lower court) (%, 2018)", "Pendency (10+ years) (lower court) (%, 2018)",   "Share of women judges (lower courts) (%, 2017)",
+"Share of women judges (High Court) (%, 2017)",   "High court Pendency (Years, 2017-18)" ,         
+"Lower court Pendency (Years, 2017-18)",          "Courthall shortfall (2016, March '18)"  ,       
+"Population per HC judge (2016-17)",              "Population per Lower Court judge (2016-17)"    ,
+"High Court judges vacancies (%, 2016-2017)",     "Lower Court judges vacancies (%, 2016-17)"     ,
+"High Court staff vacancy (%, 2016-17)",          "Cases pending (High Court judge) (2012-17)"    ,
+"Case pending (Lower Courts judge) (2012-17)" ,   "Pendency in High Court (2012-17)"              ,
+"Pendency in Lower Courts (2012-17)"          ,   "Judge vacancy (Lower court) (2012-17)"         ,
+"Judge vacancy (High court) (2012-17)"         ,  "Case clearance rate (High Courts) (2016-17)"   ,
+"Case clearance rate (Lower Courts) (2016-17)"  , "Case clearance rate (Lower Courts) (2012-17)"  ,
+"Case clearance rate (High Courts) (2012-17)"   , "Per capita spend on judiciary (Rs, 2015 - 16)" ,
+"budget_comparison"))
+
+colnames(jud_score_CS)[3] <- "score"
+
+
+jud_m_CS <- jud_m_CS %>% 
+  mutate("Themes" = case_when(
+   variable == "Pendency (5-10 years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ "Workload",
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ "Diversity",
+    variable == "Share of women judges (High Court) (%, 2017)" ~ "Diversity",
+    variable == "High court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Lower court Pendency (Years, 2017-18)" ~ "Workload",
+    variable == "Courthall shortfall (2016, March '18)" ~ "Infrastructure",
+    variable == "Population per HC judge (2016-17)" ~ "Human Resources",
+    variable == "Population per Lower Court judge (2016-17)" ~ "Human Resources" ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ "Human Resources" ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ "Human Resources",
+    variable == "High Court staff vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cases pending (High Court judge) (2012-17)" ~ "Trends",
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ "Trends" ,
+    variable == "Pendency in High Court (2012-17)" ~ "Trends",
+    variable == "Pendency in Lower Courts (2012-17)" ~ "Trends" ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ "Trends",
+    variable == "Judge vacancy (High court) (2012-17)" ~ "Trends",
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ "Workload" ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ "Workload",
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ "Trends",
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ "Trends",
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ "Trends" ,
+    variable == "budget_comparison" ~ "Trends"))
+
+jud_m_CS <- jud_m_CS %>%   
+      mutate("Best value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Pendency (5-10 years) (lower court) (%, 2018)" &jud_m_CS$States=="Manipur")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Pendency (10+ years) (lower court) (%, 2018)" &jud_m_CS$States=="Manipur")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_CS$States=="Manipur")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_CS$States=="Manipur")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="High court Pendency (Years, 2017-18)"&jud_m_CS$States=="Manipur")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_CS$States=="Manipur")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Courthall shortfall (2016, March '18)"&jud_m_CS$States=="Manipur")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Population per HC judge (2016-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Population per Lower Court judge (2016-17)"&jud_m_CS$States=="Manipur")] ,
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="High Court judges vacancies (%, 2016-2017)"&jud_m_CS$States=="Manipur")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Lower Court judges vacancies (%, 2016-17)"&jud_m_CS$States=="Manipur")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="High Court staff vacancy (%, 2016-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Cases pending (High Court judge) (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Case pending (Lower Courts judge) (2012-17)"&jud_m_CS$States=="Manipur")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Pendency in High Court (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Pendency in Lower Courts (2012-17)"&jud_m_CS$States=="Manipur")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Judge vacancy (High court) (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Case clearance rate (High Courts) (2016-17)"&jud_m_CS$States=="Manipur")] ,
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Case clearance rate (Lower Courts) (2016-17)"&jud_m_CS$States=="Manipur")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Case clearance rate (Lower Courts) (2012-17)"&jud_m_CS$States=="Manipur")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Case clearance rate (High Courts) (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Per capita spend on judiciary (Rs, 2015 - 16)"&jud_m_CS$States=="Manipur")] ,
+    variable == "budget_comparison" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="budget_comparison"&jud_m_CS$States=="Manipur")]))
+
+
+jud_m_CS <- jud_m_CS %>% 
+  mutate("worst value" = case_when(
+    variable == "Pendency (5-10 years) (lower court) (%, 2018)"~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Pendency (5-10 years) (lower court) (%, 2018)"&jud_m_CS$States=="Manipur")],
+    variable == "Pendency (10+ years) (lower court) (%, 2018)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Pendency (10+ years) (lower court) (%, 2018)"&jud_m_CS$States=="Manipur")],
+    variable == "Share of women judges (lower courts) (%, 2017)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Share of women judges (lower courts) (%, 2017)"&jud_m_CS$States=="Manipur")],
+    variable == "Share of women judges (High Court) (%, 2017)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Share of women judges (High Court) (%, 2017)"&jud_m_CS$States=="Manipur")],
+    variable == "High court Pendency (Years, 2017-18)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="High court Pendency (Years, 2017-18)"&jud_m_CS$States=="Manipur")],
+    variable == "Lower court Pendency (Years, 2017-18)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Lower court Pendency (Years, 2017-18)"&jud_m_CS$States=="Manipur")],
+    variable == "Courthall shortfall (2016, March '18)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Courthall shortfall (2016, March '18)" &jud_m_CS$States=="Manipur")],
+    variable == "Population per HC judge (2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Population per HC judge (2016-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Population per Lower Court judge (2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Population per Lower Court judge (2016-17)" &jud_m_CS$States=="Manipur")],
+    variable == "High Court judges vacancies (%, 2016-2017)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="High Court judges vacancies (%, 2016-2017)" &jud_m_CS$States=="Manipur")] ,
+    variable == "Lower Court judges vacancies (%, 2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Lower Court judges vacancies (%, 2016-17)" &jud_m_CS$States=="Manipur")],
+    variable == "High Court staff vacancy (%, 2016-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="High Court staff vacancy (%, 2016-17)" &jud_m_CS$States=="Manipur")],
+    variable == "Cases pending (High Court judge) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Cases pending (High Court judge) (2012-17)" &jud_m_CS$States=="Manipur")],
+    variable == "Case pending (Lower Courts judge) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Case pending (Lower Courts judge) (2012-17)" &jud_m_CS$States=="Manipur")] ,
+    variable == "Pendency in High Court (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Pendency in High Court (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Pendency in Lower Courts (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Pendency in Lower Courts (2012-17)"&jud_m_CS$States=="Manipur")] ,
+    variable == "Judge vacancy (Lower court) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Judge vacancy (Lower court) (2012-17)"&jud_m_CS$States=="Manipur")],
+    variable == "Judge vacancy (High court) (2012-17)" ~ jud_m_CS$highvalue[which(jud_m_CS$variable =="Judge vacancy (High court) (2012-17)" &jud_m_CS$States=="Manipur")],
+    variable == "Case clearance rate (High Courts) (2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Case clearance rate (High Courts) (2016-17)"& jud_m_CS$States=="Manipur")],
+    variable == "Case clearance rate (Lower Courts) (2016-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Case clearance rate (Lower Courts) (2016-17)" &jud_m_CS$States=="Manipur")],
+     variable == "Case clearance rate (Lower Courts) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Case clearance rate (Lower Courts) (2012-17)" &jud_m_CS$States=="Manipur")],
+     variable == "Case clearance rate (High Courts) (2012-17)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Case clearance rate (High Courts) (2012-17)" &jud_m_CS$States=="Manipur")],
+    variable == "Per capita spend on judiciary (Rs, 2015 - 16)" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="Per capita spend on judiciary (Rs, 2015 - 16)" &jud_m_CS$States=="Manipur")],
+    variable == "budget_comparison" ~ jud_m_CS$lowvalue[which(jud_m_CS$variable =="budget_comparison"&jud_m_CS$States=="Manipur")]))
+
+jud_m_CS <- left_join(jud_m_CS,jud_score_CS,by=c("States", "variable"))
+
+jud_m_CS <- jud_m_CS %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+```
+
+RBINDING sheets
+
+```{r}
+
+jud_mf <- rbind(jud_m_mid_large, jud_m_small)
+jud_mf <- rbind(jud_mf, jud_m_UT)
+jud_mf <- rbind(jud_mf, jud_m_CS)
+
+```
+
+
+```{r}
+write_xlsx(jud_mf, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Design/judiciary_design.xlsx")
+
+```
+
+
+
+
+
+
+
+
+
