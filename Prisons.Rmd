@@ -1,0 +1,1580 @@
+---
+title: "Prisons"
+output: html_document
+---
+
+
+```{r}
+
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(DT)
+library(lettercase)
+#library(RSQLite)
+library(data.table)
+library(hablar)
+
+```
+
+Indicators
+
+Workload
+
+1. Inmates per prison officer (persons, 2015-16)
+2. Inmates per jail cadre staff (persons, 2015-16)
+3. Inmates per correctional staff (persons, 2015-16)
+
+Trends
+1. Trend in prison officer vacancies (% points, 2015-16)
+2. Trend in jail cadre staff vacancies (% points, 2015-16)
+3. Trend in share of women in prison staff (% points, 2015-16)
+4. Trend in inmates per prison officer p (%, 2015-16)
+5. Trend in inmates per jail cadre staff (%, 2015-16)
+6. Trend in share of undertrial population (% points, 2015-16)
+7. Trend in expenditure per inmate (%, 2015-16)
+8. Trend in prison expenditure (%, 2015-16)
+9. Trend in budget utilization (% points, 2015-16)
+
+Infrastructure
+1. Prison occupancy (%, 2015-16)
+
+Human Resources
+1. Prison officers, vacancy (%, 2015-16)
+2. Jail cadre staff, vacancy (%, 2015-16)
+3. Correctional staff, vacancy(%, 2015-16)
+4. Medical staff, vacancy (%, 2015-16)
+5. Medical officers, vacancy (%, 2015-16)
+
+Diversity
+1. Share of women staff in prison staff (persons, 2015-16)
+
+
+Budgets
+1. Expenditure per inmate per year (Rs, 2015-16)
+2. Prison budget utilization (%, 2015-16)
+3. Average change in prisons expenditure - average change in state expenditure in five years
+
+```{r}
+
+```
+
+
+*Theme* : **Workload**
+1 *Indicator* : Inmates per prison officer (persons, 2016-17)
+*Short name* :  Inmates per officer (persons, 2016-17)
+
+```{r}
+
+prison_staff_2016 <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/prison staff ranks 2016.xlsx")
+inmates <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Occupancy-Rates.xlsx")
+
+inmates$`Occupancy Rate(%): Total` <- inmates$`Occupancy Rate(%): Total`*100
+
+prison_officers_inmates <- left_join(inmates, prison_staff_2016, by = c("States", "Year"))
+
+prison_officers_dysp1 <-  prison_officers_inmates %>% 
+  filter(Year==2016) %>% 
+  rowwise() %>% 
+  mutate("prison_officers_dysp" = sum(`Supdt.: actual`, `Dy. Supdt.: actual`, `Asstt. Supdt.: actual`, `Jailor: actual`, `Dy. Jailor: actual`, `Asstt. Jailor: actual`, `Other Officers: actual`, na.rm = TRUE)) %>% 
+  mutate("inmates per prison officer" = (`Inmate Population: Total`/`prison_officers_dysp`))
+
+IN1 <- prison_officers_dysp1 %>% 
+  select("States", "Year", "inmates per prison officer")
+
+```
+
+2. *Indicator* : Inmates per jail cadre staff (persons, 2016-17)
+*Short name* :  Inmates per cadre staff (persons, 2016-17)
+
+3. *Indicator* : Inmates per correctional staff (persons, 2016-17)
+*Short name* :  Inmates per correctional staff (persons, 2016-17)
+ 
+
+```{r}
+
+prison_staff <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Prison staff.xlsx")
+inmates <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Occupancy-Rates.xlsx")
+
+prison_officers_inmates <- left_join(inmates, prison_staff, by = c("States", "Year"))
+
+inmates_to_jc_cs <- prison_officers_inmates %>% 
+  rowwise() %>% 
+  mutate("inmates_to_jc" = round(`Inmate Population: Total`/sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (Approved)`, `Jail Cadre Staff: WARDER / MATRON (Approved)`, `Jail Cadre Staff: OTHERS (approved)`),2)) %>% 
+  mutate("inmates_to_cs" = round(`Inmate Population: Total`/sum(`CORRECTIONAL STAFF : PROBATION OFFICER / WELFARE OFFICER (approved)`, `Correctional Staff: PHYCHOLOGISTS / PSYCHIATRISTS (Approved)`, `Correctional Staff: SOCIAL WORKER / OTHERS (Approved)`),2))
+
+IN2 <- inmates_to_jc_cs %>% 
+  dplyr::select("States", "Year", "inmates_to_jc", "inmates_to_cs")
+  
+
+
+```
+*Theme* : **Infrastructure**
+
+1. *Indicator* : Prison occupancy (%, 2016-17)
+*Short name* :   Occupancy (%, 2016-17)
+
+```{r}
+
+inmates$`Occupancy Rate(%): Total` <- as.numeric(inmates$`Occupancy Rate(%): Total`)
+
+IN3 <- inmates %>% 
+  select("States", "Year", "Occupancy Rate(%): Total") %>% 
+  mutate("Occupancy Rate(%): Total" = (`Occupancy Rate(%): Total`*100))
+
+```
+
+*Theme* : **Human Resources**
+
+1. *Indicator* : Prison officers, vacancy (%, 2016-17)
+*Short name* :   Officers, vacancies (%, 2016-17)
+
+2. *Indicator* : Jail cadre staff, vacancy (%, 2016-17)
+*Short name* :   Cadre staff, vacancy (%, 2016-17)
+
+3. *Indicator* : Correctional staff, vacancy(%, 2016-17) 
+*Short name* :   Correctional staff, vacancy(%, 2016-17) 
+
+4. *Indicator* : Medical staff, vacancy (%, 2016-17)
+*Short name* :   Medical staff, vacancy (%, 2016-17)
+
+5. *Indicator* : Medical officers, vacancy (%, 2016-17)
+*Short name* :   Medical officers, vacancy (%, 2016-17)
+ 
+```{r}
+
+officers <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Prison staff.xlsx")
+officers <- officers %>% 
+  rowwise() %>% 
+  mutate("officers_vacancy_%" = (100-(sum(`Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (approved)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (approved)`, `Officers: OTHERS (approved)`, na.rm = TRUE)/(sum(`Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (Sanctioned)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (Sanctioned)`, `Officers: OTHERS (Sanctioned)`, na.rm = TRUE)))*100)) %>% 
+  mutate("JC_vacancy_%" = (100-(sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (Approved)`,`Jail Cadre Staff: WARDER / MATRON (Approved)`, `Jail Cadre Staff: OTHERS (approved)`, na.rm = TRUE)/sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (sanctioned)`, `Jail Cadre Staff: WARDER / MATRON (Sanctioned)`, `Jail Cadre Staff: OTHERS (sanctioned)`, na.rm = TRUE))*100)) %>% 
+  mutate("CS_vacancy_%" = (100-(sum(`CORRECTIONAL STAFF : PROBATION OFFICER / WELFARE OFFICER (approved)`, `Correctional Staff: PHYCHOLOGISTS / PSYCHIATRISTS (Approved)`, `Correctional Staff: SOCIAL WORKER / OTHERS (Approved)`, na.rm= TRUE)/sum(`Correctional Staff: PROBATION OFFICER / WELFARE OFFICER (Sanctioned)`, `CORRECTIONAL STAFF: PHYCHOLOGISTS / PSYCHIATRISTS (sanctioned)`, `Correctional Staff: SOCIAL WORKER / OTHERS (Sanctioned)`, na.rm = TRUE))*100)) %>% 
+  mutate("MS_vacancy_%" = (100-(sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`, `Medical Staff: PHARMACISTS (Approved)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT(approved)`, `Medical Staff: OTHERS (Approved)`, na.rm = TRUE)/sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`, `Medical Staff: PHARMACISTS (sanctioned)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT (Sanctioned)`, `Medical Staff: OTHERS (sanctioned)`, na.rm = TRUE))*100)) %>% 
+  mutate("MO_vacancy_%" = (100-(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`/`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`)*100))
+
+IN4 <- officers %>% 
+  dplyr::select("States", "Year", "officers_vacancy_%", "JC_vacancy_%", "CS_vacancy_%", "MS_vacancy_%", "MO_vacancy_%")
+
+```
+*Theme* : **Diversity**
+5. *Indicator* : Share of women staff in prison staff (persons, 2016-17)
+  *Short name* :   Women in prison staff (persons, 2016-17)
+
+```{r}
+
+women_staff <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Women Staff.xlsx")
+prison_staff <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Prison staff.xlsx")
+
+womenshare_prisonstaff <- left_join(women_staff, prison_staff, c = by ("States", "Year"))
+
+women_share <- womenshare_prisonstaff %>% 
+  dplyr::select("States", "Year", "women_prison_staff", "total_prison_staff") %>% 
+  mutate("women_share" = (women_prison_staff/total_prison_staff*100))
+
+IN5 <- women_share %>% 
+  dplyr::select("States", "Year", "women_share")
+
+```
+*Theme* : **Budget**
+
+1. *Indicator* : Expenditure per inmate per year (Rs, 2016-17)
+  *Short name* :  Spend per inmate (Rs, 2016-17)
+  
+```{r}
+
+prison_exp1 = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/expenses per inmate.xlsx")
+
+IN6 <- prison_exp1 %>% 
+  select("States", "Year", "Expenditure per inmate")
+
+```
+  
+
+2. *Indicator* : Prison budget utilization (%, 2016-17)
+  *Short name* : Prison budget used (%, 2016-17)
+  
+```{r}
+
+budget <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Budgets and expenditure.xlsx")
+budget$`Prison Budget Utilized%` <- budget$`Prison Budget Utilized%`*100
+
+IN7 <- budget %>% 
+  select("States", "Year", "Prison Budget Utilized%")
+
+
+```
+  
+  
+3. *Indicator* : Average change in prisons expenditure - average change in state expenditure in five years
+  *Short name* : Budget comparison 
+  
+```{r}
+
+state_trend <- state_expend %>%
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  #filter(!is.na(`State expenditure (Rs lakhs)`), !is.infinite(`State expenditure (Rs lakhs)`), `State expenditure (Rs lakhs)` !=0 ) %>% 
+  mutate("Y-o-Y:state_exp" = ((`State expenditure (Rs lakhs)` - lag(`State expenditure (Rs lakhs)`))/lag(`State expenditure (Rs lakhs)`)*100)) %>% 
+  mutate("average:state_exp" = (mean(`Y-o-Y:state_exp`, na.rm = TRUE)))
+
+pillar_trend <- budget %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009 & Year<2016) %>% 
+  #filter(!is.na(`Total expenditure (Plan +non-plan+other expenditure)`), !is.infinite(`Total expenditure (Plan +non-plan+other expenditure)`), `Total expenditure (Plan +non-plan+other expenditure)` !=0) %>% 
+  mutate("Y-o-Y:prison_exp" = ((`Total expenditure (Plan +non-plan+other expenditure)` - lag(`Total expenditure (Plan +non-plan+other expenditure)`))/lag(`Total expenditure (Plan +non-plan+other expenditure)`)*100)) %>%   
+  mutate("average:prison_exp" = (mean(`Y-o-Y:prison_exp`, na.rm = TRUE)))
+
+exp_state_prison <- left_join(state_trend, pillar_trend, by = c("States", "Year"))
+exp_state_prison <- exp_state_prison %>% 
+  mutate(budget_comparison = `average:prison_exp` - `average:state_exp`)
+
+prison_exp_state_exp <- left_join(state_expend, budget, by = c("States", "Year"))
+prison_exp_state_exp <- prison_exp_state_exp %>% 
+  rowwise() %>% 
+  mutate("prison_exp_state_exp" = (`Total expenditure (Plan +non-plan+other expenditure)`/`State expenditure (Rs lakhs)`)*100)
+
+  
+IN8 <- exp_state_prison %>% 
+  select("States", "Year", "average:prison_exp", "average:state_exp" , "budget_comparison")
+
+```
+  
+*Theme* : **Trends**
+
+1. *Indicator* : Trend in prison officer vacancies (% points, 2016-17)
+  *Short name* : Officer vacancies (% points, 2012-17) 
+  
+```{r}
+
+IN9a <- IN4 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`officers_vacancy_%`), !is.infinite(`officers_vacancy_%`)) %>% 
+  mutate("Y-o-Y:officer vacancies" = (`officers_vacancy_%`) - lag(`officers_vacancy_%`)) %>% 
+  mutate("average:officer vacancies" = mean(`Y-o-Y:officer vacancies`, na.rm = TRUE)) 
+
+IN9 <- IN9a %>% 
+  select("States", "Year", "average:officer vacancies")
+
+
+```
+  
+2. *Indicator* : Trend in jail cadre staff vacancies (% points, 2016-17)
+  *Short name* : Cadre staff vacancies (% points, 2012-17) 
+  
+```{r}
+
+IN10a <- IN4 %>% 
+ group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`JC_vacancy_%`), !is.infinite(`JC_vacancy_%`)) %>% 
+  mutate("Y-o-Y:JC vacancies" = (`JC_vacancy_%`) - lag(`JC_vacancy_%`)) %>% 
+  mutate("average:JC vacancies" = mean(`Y-o-Y:JC vacancies`, na.rm = TRUE)) 
+
+
+  
+IN10 <- IN10a %>% 
+  select("States", "Year", "average:JC vacancies")
+
+```
+
+3. *Indicator* : Trend in share of women in prison staff (% points, 2016-17)
+  *Short name* : Share of women in prison staff (% points, 2012-17)
+  
+```{r}
+
+IN11 <- IN5 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(women_share), !is.infinite(women_share)) %>% 
+  mutate("Y-o-Y:women share" = (women_share) - lag(women_share)) %>% 
+  mutate("average:women share" = mean(`Y-o-Y:women share`, na.rm = TRUE)) 
+
+
+
+IN11 <- IN11 %>% 
+  select("States", "Year", "average:women share")
+
+
+```
+
+4. *Indicator* : Trend in inmates per prison officer (%, 2016-17)
+  *Short name* : Inmates per prison officer (%, 2012-17)
+
+```{r}
+
+inmates <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/Occupancy-Rates.xlsx")
+inmates$`Occupancy Rate(%): Total` <- inmates$`Occupancy Rate(%): Total`*100
+
+prison_officers_inmates <- left_join(inmates, prison_staff, by = c("States", "Year"))
+
+prison_officers_dysp <-  prison_officers_inmates %>% 
+  dplyr::select("States", "Year", "Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (approved)", "Officers: OTHERS (approved)", "Inmate Population: Total") %>% 
+  rowwise() %>% 
+  mutate("prison_officers_dysp" = sum(`Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (approved)`, `Officers: OTHERS (approved)`)) %>% 
+  mutate("inmates per prison officer" = (`Inmate Population: Total`/`prison_officers_dysp`))
+
+
+IN12a <- prison_officers_dysp %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`inmates per prison officer`), !is.infinite(`inmates per prison officer`)) %>% 
+  mutate("Y-o-Y:inmates per prison officer" = (((`inmates per prison officer`) - lag(`inmates per prison officer`))/lag(`inmates per prison officer`))*100) %>% 
+  mutate("average:inmates per prison officer" = mean(`Y-o-Y:inmates per prison officer`, na.rm = TRUE)) 
+
+
+
+IN12 <- IN12a %>% 
+  select("States", "Year", "average:inmates per prison officer")
+
+```
+
+5. *Indicator* : Trend in inmates per jail cadre staff (%, 2016-17)
+  *Short name* : Inmates per cadre staff (%, 2012-17)
+
+```{r}
+
+IN13a <- IN2 %>% 
+  select("States", "Year", "inmates_to_jc") %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`inmates_to_jc`), !is.infinite(`inmates_to_jc`)) %>% 
+  mutate("Y-o-Y:inmates_to_JC" = ((`inmates_to_jc`) - lag(`inmates_to_jc`))/lag(`inmates_to_jc`)*100) %>% 
+  mutate("average:inmates_to_jc" = mean(`Y-o-Y:inmates_to_JC`, na.rm = TRUE)) 
+
+
+IN13<- IN13a %>% 
+  select("States", "Year", "average:inmates_to_jc")
+
+```
+
+6. *Indicator* : Trend in share of undertrial population (% points, 2016-17)
+  *Short name* : Share of UTPs (% points, 2012-17) 
+
+
+```{r}
+
+UT_pop <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Prisons/Prison Data/UT Population rate.xlsx", sheet = "Sheet1")
+UT_pop$`Share of Undertrial Population` <- UT_pop$`Share of Undertrial Population`*100
+
+IN14a <- UT_pop %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Share of Undertrial Population`), !is.infinite(`Share of Undertrial Population`)) %>% 
+  mutate("Y-o-Y:share of undertrial" = (`Share of Undertrial Population` - lag(`Share of Undertrial Population`))) %>% 
+  mutate("average:share of undertrial" = (mean(`Y-o-Y:share of undertrial`, na.rm = TRUE)))
+
+
+
+IN14 <- IN14a %>% 
+  dplyr::select("States","Year", "average:share of undertrial")
+
+write_xlsx(IN14, "/Users/shreyaagarwal/Desktop/UTP.xlsx")
+
+```
+
+7. *Indicator* : Trend in expenditure per inmate (%, 2016-17)
+  *Short name* : Spend per inmate (%, 2012-17)
+
+```{r}
+
+IN15a <- IN6 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Expenditure per inmate`), !is.infinite(`Expenditure per inmate`)) %>% 
+  mutate("Y-o-Y:expenditure per inmate per year" = ((`Expenditure per inmate` - lag(`Expenditure per inmate`))/lag(`Expenditure per inmate`)*100)) %>% 
+  mutate("average:expenditure per inmate per year" = mean(`Y-o-Y:expenditure per inmate per year`, na.rm = TRUE))
+
+
+
+IN15 <- IN15a %>% 
+  select("States", "Year", "average:expenditure per inmate per year")
+
+```
+
+```{r}
+
+IN3aa <- IN3 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Expenditure per inmate`), !is.infinite(`Expenditure per inmate`)) %>% 
+  mutate("Y-o-Y:occupancy" = ((`Occupancy Rate(%): Total` - lag(`Occupancy Rate(%): Total`))/lag(`Occupancy Rate(%): Total`)*100)) %>% 
+  mutate("average:occupancy" = mean(`Y-o-Y:occupancy`, na.rm = TRUE))
+
+write_xlsx(IN3aa, "/Users/shreyaagarwal/Desktop/occupancy_change.xlsx")  
+  
+
+
+```
+
+8. *Indicator* : Trend in prison expenditure (%, 2016-17)
+  *Short name* : Total prison spend (% points, 2012-17) 
+
+```{r}
+
+IN16a <- budget %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Total expenditure (Plan +non-plan+other expenditure)`), !is.infinite(`Total expenditure (Plan +non-plan+other expenditure)`)) %>% 
+  mutate("Y-o-Y:prison expenditure" = ((`Total expenditure (Plan +non-plan+other expenditure)` - lag(`Total expenditure (Plan +non-plan+other expenditure)`))/lag(`Total expenditure (Plan +non-plan+other expenditure)`)*100)) %>% 
+  mutate("average:prison expenditure" = mean(`Y-o-Y:prison expenditure`, na.rm = TRUE))
+
+write_xlsx(IN15a, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Prison/checks.xlsx")
+
+#IN16 <- IN16a %>% 
+#  select("States", "Year", "average:prison expenditure")
+
+```
+
+9. *Indicator* : Trend in budget utilization (% points, 2016-17)
+  *Short name* : Budget used (% points, 2012-17)
+
+```{r}
+
+IN17a <- IN7 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Prison Budget Utilized%`), !is.infinite(`Prison Budget Utilized%`)) %>% 
+  mutate("Y-o-Y:prison budget utilized" = `Prison Budget Utilized%` - lag(`Prison Budget Utilized%`)) %>% 
+  mutate("average:prison budget utilized" = mean(`Y-o-Y:prison budget utilized`, na.rm = TRUE))
+  
+IN17 <- IN17a %>% 
+  select("States", "Year", "average:prison budget utilized")
+
+```
+
+
+```{r}
+
+prison_indicators <- left_join(IN2, IN1, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN3, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN4, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN5, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN6, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN7, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN8, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN9, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN10, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN11, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN12, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN13, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN14, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN15, by =c("States", "Year"))
+#prison_indicators <- left_join(prison_indicators, IN16, by =c("States", "Year"))
+prison_indicators <- left_join(prison_indicators, IN17, by =c("States", "Year"))
+
+
+```
+
+Latest year - 2016
+
+```{r}
+
+prison_latest <- prison_indicators 
+
+
+```
+
+
+```{r}
+
+setnames(prison_latest, "inmates per prison officer", "Inmates per officer (persons, 2016-17)")
+setnames(prison_latest, "inmates_to_jc", "Inmates per cadre staff (persons, 2016-17)")
+setnames(prison_latest, "inmates_to_cs", "Inmates per correctional staff (persons, 2016-17)")
+setnames(prison_latest, "Occupancy Rate(%): Total", "Occupancy (%, 2016-17)")
+setnames(prison_latest, "officers_vacancy_%", "Officers, vacancy (%, 2016-17)")
+setnames(prison_latest, "JC_vacancy_%", "Cadre staff, vacancy (%, 2016-17)")
+setnames(prison_latest, "CS_vacancy_%", "Correctional staff, vacancy(%, 2016-17)")
+setnames(prison_latest, "MS_vacancy_%", "Medical staff, vacancy (%, 2016-17)")
+setnames(prison_latest, "MO_vacancy_%", "Medical officers, vacancy (%, 2016-17)")
+setnames(prison_latest, "women_share", "Women in prison staff (persons, 2016-17)")
+setnames(prison_latest, "Expenditure per inmate", "Spend per inmate (Rs, 2016-17)")
+setnames(prison_latest, "Prison Budget Utilized%", "Prison budget used (%, 2016-17)")
+setnames(prison_latest, "budget_comparison", "budget_comparison")
+setnames(prison_latest, "average:officer vacancies", "Officer vacancy (% points, 2012-17)")
+setnames(prison_latest, "average:JC vacancies", "Cadre staff vacancy (% points, 2012-17)")
+setnames(prison_latest, "average:women share", "Share of women in prison staff (% points, 2012-17)")
+setnames(prison_latest, "average:inmates per prison officer", "Inmates per prison officer (%, 2012-17)")
+setnames(prison_latest, "average:inmates_to_jc", "Inmates per cadre staff (%, 2012-17)")
+setnames(prison_latest, "average:share of undertrial", "Share of UTPs (% points, 2012-17) ")
+setnames(prison_latest, "average:expenditure per inmate per year", "Spend per inmate (%, 2012-17)")
+#setnames(prison_latest, "average:prison expenditure", "Total prison spend (%, 2012-17)")
+setnames(prison_latest, "average:prison budget utilized", "Budget used (% points, 2012-17)")
+
+
+```
+
+Source Data
+```{r}
+
+source_data <- merge(prison_staff_2016, inmates ,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, officers,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, women_staff,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, prison_staff,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, prison_exp1,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, budget,by = c("States", "Year"), all = TRUE)
+source_data <- merge(source_data, UT_pop , by = c("States", "Year"), all = TRUE)
+
+
+
+```
+
+Clustering
+```{r}
+
+prison_latest <- prison_latest %>% 
+  mutate("Clusters" = case_when(
+    States %in% c("Lakshadweep", "A&N Islands", "Daman & Diu", "D&N Haveli", "Chandigarh", "Puducherry", "Delhi") ~ "Union Territory",
+    States %in% c("Sikkim", "Mizoram", "Arunachal Pradesh", "Goa", "Meghalaya", "Tripura", "Himachal Pradesh") ~ "Small States",
+    States %in% c("Uttarakhand", "Telangana", "Haryana", "Chhattisgarh", "Punjab",  "Jharkhand", "Kerala", "Odisha", "Gujarat", "Karnataka", "Rajasthan", "Tamil Nadu", "Madhya Pradesh", "Andhra Pradesh", "West Bengal", "Bihar", "Maharashtra", "Uttar Pradesh") ~ "Large and Mid States",
+    States %in% c("Manipur", "Jammu & Kashmir", "Assam", "Nagaland") ~ "Conflict States"
+  )) 
+
+```
+
+Latest year
+
+```{r}
+
+prison_latest_16 <- prison_latest %>% 
+  select("States", "Year", "Inmates per officer (persons, 2016-17)", "Inmates per cadre staff (persons, 2016-17)",
+"Inmates per correctional staff (persons, 2016-17)", "Occupancy (%, 2016-17)","Officers, vacancy (%, 2016-17)",
+"Cadre staff, vacancy (%, 2016-17)", "Correctional staff, vacancy(%, 2016-17)","Medical staff, vacancy (%, 2016-17)",
+"Medical officers, vacancy (%, 2016-17)", "Women in prison staff (persons, 2016-17)", "Spend per inmate (Rs, 2016-17)",
+"Prison budget used (%, 2016-17)","Officer vacancy (% points, 2012-17)","Cadre staff vacancy (% points, 2012-17)",
+"Share of women in prison staff (% points, 2012-17)", "Inmates per prison officer (%, 2012-17)", "Inmates per cadre staff (%, 2012-17)",
+"Share of UTPs (% points, 2012-17) ", "Spend per inmate (%, 2012-17)", "Budget used (% points, 2012-17)") %>% 
+  filter(Year == 2016)
+
+prison_latest_15 <- prison_latest %>% 
+  select("States", "Year", "budget_comparison", "Clusters") %>% 
+  filter(Year == 2015)
+  
+prison_latest <- left_join(prison_latest_16, prison_latest_15, by =c("States"))
+
+prison_latest$Year.x <- NULL
+prison_latest$Year.y <- NULL
+
+```
+
+CHANGE NANs and INFs to NAs
+```{r}
+
+#prison_latest <- prison_latest %>% rationalize()
+
+```
+
+Replace Andhra Pradesh and Telangana values in trends with NAs
+
+```{r}
+
+#Telangana
+prison_latest$`Officer vacancy (% points, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Cadre staff vacancy (% points, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Share of women in prison staff (% points, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Inmates per prison officer (%, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Inmates per cadre staff (%, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Share of UTPs (% points, 2012-17) `[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Spend per inmate (%, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+#prison_latest$`Total prison spend (%, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$`Budget used (% points, 2012-17)`[which(prison_latest$States=="Telangana")] <- "not included in trends"
+prison_latest$budget_comparison[which(prison_latest$States=="Telangana")] <- "not included in trends"
+
+# Andhra Pradesh
+
+prison_latest$`Officer vacancy (% points, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Cadre staff vacancy (% points, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Share of women in prison staff (% points, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Inmates per prison officer (%, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Inmates per cadre staff (%, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Share of UTPs (% points, 2012-17) `[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Spend per inmate (%, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+#prison_latest$`Total prison spend (%, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$`Budget used (% points, 2012-17)`[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+prison_latest$budget_comparison[which(prison_latest$States=="Andhra Pradesh")] <- "not included in trends"
+
+#Lakshadweep 
+
+prison_latest$`Inmates per officer (persons, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Sum of officers shows zero"
+prison_latest$`Inmates per cadre staff (persons, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Sum of cadre staff shows zero"
+prison_latest$`Officers, vacancy (%, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on officers show zero"
+prison_latest$`Cadre staff, vacancy (%, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on cadre staff show zero"
+prison_latest$`Women in prison staff (persons, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on women staff show zero"
+prison_latest$`Officer vacancy (% points, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on officers show zero"
+prison_latest$`Cadre staff vacancy (% points, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on cadre staff show zero"
+prison_latest$`Share of women in prison staff (% points, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on women staff show zero"
+prison_latest$`Inmates per prison officer (%, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on officers shows zero"
+prison_latest$`Inmates per cadre staff (%, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on cadre staff shows zero"
+
+#D&N Haveli
+prison_latest$`Inmates per officer (persons, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Sum of officers shows zero"
+prison_latest$`Inmates per cadre staff (persons, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Sum of cadre staff shows zero"
+prison_latest$`Officers, vacancy (%, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on officers shows zero"
+prison_latest$`Cadre staff, vacancy (%, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on cadre staff shows zero"
+prison_latest$`Women in prison staff (persons, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on women staff shows zero"
+prison_latest$`Officer vacancy (% points, 2012-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on officers shows zero"
+prison_latest$`Cadre staff vacancy (% points, 2012-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on cadre staff shows zero"
+prison_latest$`Share of women in prison staff (% points, 2012-17)`[which(prison_latest$States == "D&N Haveli")] <- "data on women staff show zero"
+prison_latest$`Inmates per prison officer (%, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on officers shows zero"
+prison_latest$`Inmates per cadre staff (%, 2012-17)`[which(prison_latest$States == "Lakshadweep")] <- "data on cadre staff show zero"
+
+#Correctional staff
+
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Assam")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Tripura")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Andhra Pradesh")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Puducherry")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Telangana")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "A&N Islands")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Haryana")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Manipur")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Sikkim")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Goa")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Punjab")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Chandigarh")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Arunachal Pradesh")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Daman & Diu")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Correctional staff shows zero"
+prison_latest$`Inmates per correctional staff (persons, 2016-17)`[which(prison_latest$States == "Meghalaya")] <- "Correctional staff shows zero"
+
+#Correctional staff, vacancy(%, 2016-17)
+
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Andhra Pradesh")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Goa")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Haryana")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Manipur")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Meghalaya")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Sikkim")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "A&N Islands")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Chandigarh")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Daman & Diu")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Correctional staff shows zero"
+prison_latest$`Correctional staff, vacancy(%, 2016-17)`[which(prison_latest$States == "Puducherry")] <- "Correctional staff shows zero"
+
+#Medical staff, vacancy (%, 2016-17)
+
+prison_latest$`Medical staff, vacancy (%, 2016-17)`[which(prison_latest$States == "Sikkim")] <- "Sanctioned medical staff shows zero"
+prison_latest$`Medical staff, vacancy (%, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Sanctioned and actual medical staff shows zero"
+prison_latest$`Medical staff, vacancy (%, 2016-17)`[which(prison_latest$States == "Daman & Diu Haveli")] <- "Sanctioned and actual medical staff shows zero"
+prison_latest$`Medical staff, vacancy (%, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Sanctioned and actual medical staff shows zero"
+
+#Medical officers
+
+prison_latest$`Medical officers, vacancy (%, 2016-17)`[which(prison_latest$States == "Sikkim")] <- "Sanctioned medical officer shows zero"
+prison_latest$`Medical officers, vacancy (%, 2016-17)`[which(prison_latest$States == "D&N Haveli")] <- "Sanctioned and actual medical officer shows zero"
+prison_latest$`Medical officers, vacancy (%, 2016-17)`[which(prison_latest$States == "Daman & Diu")] <- "Sanctioned and actual medical officer shows zero"
+prison_latest$`Medical officers, vacancy (%, 2016-17)`[which(prison_latest$States == "Lakshadweep")] <- "Sanctioned and actual medical officer shows zero"
+
+
+write_xlsx(prison_latest, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/prison/prison_latest.xlsx")
+
+
+
+```
+
+
+```{r}
+
+prison_score <- prison_latest
+prison_score[1:36,2:23] <- NA
+prison_score[,c("Clusters")] <- list(NULL)
+
+```
+
+
+
+Formulas
+
+```{r}
+
+formula_1 <-function(x) {
+  case_when(!is.infinite(x)|!is.na(x)~(((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Higher the better
+
+formula_2 <-function(x) {
+  case_when(!(is.infinite(x)&&is.na(x))~(((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Lower the better
+
+formula_4 <-function(x) {
+  case_when(x <= 100 ~ 10,
+            x > 100 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - 100)) + 1
+    )    } # 100% and lower gets a 10, rest get scored as per lower the better rule
+
+formula_3 <-function(x) {
+  case_when(x <= 0 ~ 10,
+            x > 0 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - 0)) + 1
+    )    } # 0% and lower gets a 1, rest gets scored as per lower the better rule
+
+formula_5 <-function(x) {
+  case_when ( x <= 6 ~ 10,
+              x > 6 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - 6)) + 1)
+        } #
+
+formula_6 <-function(x) {
+  case_when (x >= 0 ~ 10,
+              x < 0 ~ (((x - min(x, na.rm = TRUE))*9)/(0 - min(x, na.rm = TRUE))) + 1
+       ) }
+
+formula_7 <-function(x) {
+  case_when(x >= 100 ~ 10,
+            x < 100 ~ (((x - min(x, na.rm = TRUE))*9)/(100 - min(x, na.rm = TRUE))) + 1
+    )    } #100% and greater gets a 10
+
+
+```
+
+Getting indicators ready for scoring
+
+```{r}
+
+str(prison_latest)
+prison_latest[, c(2:22)] <- sapply(prison_latest[, c(2:22)], as.numeric)
+
+
+fm1_cols <- c("Women in prison staff (persons, 2016-17)",
+              "Spend per inmate (Rs, 2016-17)",
+              "Share of women in prison staff (% points, 2012-17)",
+              "Spend per inmate (%, 2012-17)",
+              "Budget used (% points, 2012-17)")
+              
+
+fm2_cols <- c("Inmates per officer (persons, 2016-17)",
+              "Inmates per correctional staff (persons, 2016-17)",
+              "Officer vacancy (% points, 2012-17)",
+              "Cadre staff vacancy (% points, 2012-17)",
+              "Inmates per prison officer (%, 2012-17)",
+              "Inmates per cadre staff (%, 2012-17)",
+              "Share of UTPs (% points, 2012-17) ")
+
+fm3_cols <- c("Officers, vacancy (%, 2016-17)",
+              "Cadre staff, vacancy (%, 2016-17)",
+              "Correctional staff, vacancy(%, 2016-17)",
+              "Medical staff, vacancy (%, 2016-17)",
+              "Medical officers, vacancy (%, 2016-17)")
+
+fm4_cols <- c("Occupancy (%, 2016-17)")
+
+fm5_cols <- c("Inmates per cadre staff (persons, 2016-17)")
+
+fm6_cols <- c("budget_comparison")
+
+fm7_cols <- c("Prison budget used (%, 2016-17)")
+
+```
+
+SCORING
+
+
+```{r}
+
+prison_score[fm1_cols] <- lapply(prison_latest[fm1_cols], formula_1)
+prison_score[fm2_cols] <- lapply(prison_latest[fm2_cols], formula_2)
+prison_score[fm3_cols] <- lapply(prison_latest[fm3_cols], formula_3)
+prison_score[fm4_cols] <- lapply(prison_latest[fm4_cols], formula_4)
+prison_score[fm5_cols] <- lapply(prison_latest[fm5_cols], formula_5)
+prison_score[fm6_cols] <- lapply(prison_latest[fm6_cols], formula_6)
+prison_score[fm7_cols] <- lapply(prison_latest[fm7_cols], formula_7)
+
+```
+
+Clusters
+
+```{r}
+
+prison_latest_mid_large <- prison_latest %>% 
+  filter(Clusters == "Large and Mid States")
+
+prison_latest_small <- prison_latest %>% 
+  filter(Clusters == "Small States")
+
+prison_latest_UTs <- prison_latest %>% 
+  filter(Clusters == "Union Territory")  
+  
+
+
+
+prison_latest_CS <- prison_latest %>% 
+  filter(Clusters == "Conflict States")
+
+```
+
+Cluster Scoring - large+Mid States
+
+```{r}
+
+prison_large_mid_score <- prison_latest_mid_large
+prison_large_mid_score[1:18,2:22] <- NA
+prison_large_mid_score[,c("Clusters")] <- list(NULL)
+prison_large_mid_score[fm1_cols] <- lapply(prison_latest_mid_large[fm1_cols], formula_1)
+prison_large_mid_score[fm2_cols] <- lapply(prison_latest_mid_large[fm2_cols], formula_2)
+prison_large_mid_score[fm3_cols] <- lapply(prison_latest_mid_large[fm3_cols], formula_3)
+prison_large_mid_score[fm4_cols] <- lapply(prison_latest_mid_large[fm4_cols], formula_4)
+prison_large_mid_score[fm5_cols] <- lapply(prison_latest_mid_large[fm5_cols], formula_5)
+prison_large_mid_score[fm6_cols] <- lapply(prison_latest_mid_large[fm6_cols], formula_6)
+prison_large_mid_score[fm7_cols] <- lapply(prison_latest_mid_large[fm7_cols], formula_7)
+
+
+
+```
+
+Cluster Scoring - Small States
+
+```{r}
+
+prison_small_score <- prison_latest_small
+prison_small_score[1:7,2:22] <- NA
+prison_small_score[,c("Clusters")] <- list(NULL)
+prison_small_score[fm1_cols] <- lapply(prison_latest_small[fm1_cols], formula_1)
+prison_small_score[fm2_cols] <- lapply(prison_latest_small[fm2_cols], formula_2)
+prison_small_score[fm3_cols] <- lapply(prison_latest_small[fm3_cols], formula_3)
+prison_small_score[fm4_cols] <- lapply(prison_latest_small[fm4_cols], formula_4)
+prison_small_score[fm5_cols] <- lapply(prison_latest_small[fm5_cols], formula_5)
+prison_small_score[fm6_cols] <- lapply(prison_latest_small[fm6_cols], formula_6)
+prison_small_score[fm7_cols] <- lapply(prison_latest_small[fm7_cols], formula_7)
+
+
+```
+
+Cluster Scoring - UTs
+
+```{r}
+
+prison_UT_score <- prison_latest_UTs
+prison_UT_score[1:6,2:22] <- NA
+prison_UT_score[,c("Clusters")] <- list(NULL)
+prison_UT_score[fm1_cols] <- lapply(prison_latest_UTs[fm1_cols], formula_1)
+prison_UT_score[fm2_cols] <- lapply(prison_latest_UTs[fm2_cols], formula_2)
+prison_UT_score[fm3_cols] <- lapply(prison_latest_UTs[fm3_cols], formula_3)
+prison_UT_score[fm4_cols] <- lapply(prison_latest_UTs[fm4_cols], formula_4)
+prison_UT_score[fm5_cols] <- lapply(prison_latest_UTs[fm5_cols], formula_5)
+prison_UT_score[fm6_cols] <- lapply(prison_latest_UTs[fm6_cols], formula_6)
+prison_UT_score[fm7_cols] <- lapply(prison_latest_UTs[fm7_cols], formula_7)
+
+```
+
+Cluster Scoring - Conflict States
+
+```{r}
+
+prison_CS_score <- prison_latest_CS
+prison_CS_score[1:4,2:22] <- NA
+prison_CS_score[,c("Clusters")] <- list(NULL)
+prison_CS_score[fm1_cols] <- lapply(prison_latest_CS[fm1_cols], formula_1)
+prison_CS_score[fm2_cols] <- lapply(prison_latest_CS[fm2_cols], formula_2)
+prison_CS_score[fm3_cols] <- lapply(prison_latest_CS[fm3_cols], formula_3)
+prison_CS_score[fm4_cols] <- lapply(prison_latest_CS[fm4_cols], formula_4)
+prison_CS_score[fm5_cols] <- lapply(prison_latest_CS[fm5_cols], formula_5)
+prison_CS_score[fm6_cols] <- lapply(prison_latest_CS[fm6_cols], formula_6)
+prison_CS_score[fm7_cols] <- lapply(prison_latest_CS[fm7_cols], formula_7)
+
+
+```
+
+
+
+Adding benchmark row
+
+Small states
+
+```{r}
+
+prison_small_score <- prison_small_score %>% 
+  add_row(States = "Benchmark", `Inmates per officer (persons, 2016-17)` = "Lower the better", 
+         `Inmates per cadre staff (persons, 2016-17)` = "6 and below gets 10, above 6 gets scored as lower the better",
+         `Inmates per correctional staff (persons, 2016-17)` = "Lower the better",
+         `Occupancy (%, 2016-17)` = "100% and below gets 10, above 100% gets scored as per lower the better rule",
+         `Officers, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Cadre staff, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Correctional staff, vacancy(%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Medical staff, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Medical officers, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Women in prison staff (persons, 2016-17)` = "Higher the better",
+         `Spend per inmate (Rs, 2016-17)` = "Higher the better", 
+         `Prison budget used (%, 2016-17)` = "100% gets 10, values below 100% gets scored as per higher the better rule",
+         `Officer vacancy (% points, 2012-17)` = "Lower the better",
+         `Cadre staff vacancy (% points, 2012-17)` = "Lower the better",
+         `Share of women in prison staff (% points, 2012-17)` = "Higher the better",
+         `Inmates per prison officer (%, 2012-17)` = "Lower the better", 
+         `Inmates per cadre staff (%, 2012-17)` = "Higher the better",
+         `Share of UTPs (% points, 2012-17) ` = "Lower the better",
+         `Spend per inmate (%, 2012-17)` = "Higher the better",
+         `Budget used (% points, 2012-17)` = "Higher the better",
+         `budget_comparison` = "O and above 0 gets 10, values below gets scored as per higher the better rule")
+
+
+
+```
+
+Small States - Theme row
+
+```{r}
+
+prison_small_score <- prison_small_score %>% 
+  add_row(States = "Themes", `Inmates per officer (persons, 2016-17)` = "Workload", 
+         `Inmates per cadre staff (persons, 2016-17)` = "Workload",
+         `Inmates per correctional staff (persons, 2016-17)` = "Workload",
+         `Occupancy (%, 2016-17)` = "Infratstructure",
+         `Officers, vacancy (%, 2016-17)` = "Human Resource",
+         `Cadre staff, vacancy (%, 2016-17)` = "Human Resource",
+         `Correctional staff, vacancy(%, 2016-17)` = "Human Resource",
+         `Medical staff, vacancy (%, 2016-17)` = "Human Resource",
+         `Medical officers, vacancy (%, 2016-17)` = "Human Resource",
+         `Women in prison staff (persons, 2016-17)` = "Diversity",
+         `Spend per inmate (Rs, 2016-17)` = "Budget", 
+         `Prison budget used (%, 2016-17)` = "Budget",
+         `Officer vacancy (% points, 2012-17)` = "Trend",
+         `Cadre staff vacancy (% points, 2012-17)` = "Trend",
+         `Share of women in prison staff (% points, 2012-17)` = "Trend",
+         `Inmates per prison officer (%, 2012-17)` = "Trend", 
+         `Inmates per cadre staff (%, 2012-17)` = "Trend",
+         `Share of UTPs (% points, 2012-17) ` = "Trend",
+         `Spend per inmate (%, 2012-17)` = "Trend",
+         `Budget used (% points, 2012-17)` = "Trend",
+         `budget_comparison` = "Trend")
+
+```
+
+
+Adding benchmark row
+
+Large and big states
+
+```{r}
+
+prison_large_mid_score <-prison_large_mid_score %>% 
+  add_row(States = "Benchmark", `Inmates per officer (persons, 2016-17)` = "Lower the better", 
+         `Inmates per cadre staff (persons, 2016-17)` = "6 and below gets 10, above 6 gets scored as lower the better",
+         `Inmates per correctional staff (persons, 2016-17)` = "Lower the better",
+         `Occupancy (%, 2016-17)` = "100% and below gets 10, above 100% gets scored as per lower the better rule",
+         `Officers, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Cadre staff, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Correctional staff, vacancy(%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Medical staff, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Medical officers, vacancy (%, 2016-17)` = "0 and below gets 10, values above 0 gets scored as per lower the better rule",
+         `Women in prison staff (persons, 2016-17)` = "Higher the better",
+         `Spend per inmate (Rs, 2016-17)` = "Higher the better", 
+         `Prison budget used (%, 2016-17)` = "100% gets 10, values below 100% gets scored as per higher the better rule",
+         `Officer vacancy (% points, 2012-17)` = "Lower the better",
+         `Cadre staff vacancy (% points, 2012-17)` = "Lower the better",
+         `Share of women in prison staff (% points, 2012-17)` = "Higher the better",
+         `Inmates per prison officer (%, 2012-17)` = "Lower the better", 
+         `Inmates per cadre staff (%, 2012-17)` = "Higher the better",
+         `Share of UTPs (% points, 2012-17) ` = "Lower the better",
+         `Spend per inmate (%, 2012-17)` = "Higher the better",
+         `Budget used (% points, 2012-17)` = "Higher the better",
+         `budget_comparison` = "O and above 0 gets 10, values below gets scored as per higher the better rule")
+
+
+
+```
+
+large and mid States - Theme row
+
+```{r}
+
+prison_large_mid_score <- prison_large_mid_score %>% 
+  add_row(States = "Themes", `Inmates per officer (persons, 2016-17)` = "Workload", 
+         `Inmates per cadre staff (persons, 2016-17)` = "Workload",
+         `Inmates per correctional staff (persons, 2016-17)` = "Workload",
+         `Occupancy (%, 2016-17)` = "Infratstructure",
+         `Officers, vacancy (%, 2016-17)` = "Human Resource",
+         `Cadre staff, vacancy (%, 2016-17)` = "Human Resource",
+         `Correctional staff, vacancy(%, 2016-17)` = "Human Resource",
+         `Medical staff, vacancy (%, 2016-17)` = "Human Resource",
+         `Medical officers, vacancy (%, 2016-17)` = "Human Resource",
+         `Women in prison staff (persons, 2016-17)` = "Diversity",
+         `Spend per inmate (Rs, 2016-17)` = "Budget", 
+         `Prison budget used (%, 2016-17)` = "Budget",
+         `Officer vacancy (% points, 2012-17)` = "Trend",
+         `Cadre staff vacancy (% points, 2012-17)` = "Trend",
+         `Share of women in prison staff (% points, 2012-17)` = "Trend",
+         `Inmates per prison officer (%, 2012-17)` = "Trend", 
+         `Inmates per cadre staff (%, 2012-17)` = "Trend",
+         `Share of UTPs (% points, 2012-17) ` = "Trend",
+         `Spend per inmate (%, 2012-17)` = "Trend",
+         `Budget used (% points, 2012-17)` = "Trend",
+         `budget_comparison` = "Trend")
+
+```
+
+Formulae
+
+```{r}
+
+prison_formulae <- prison_small_score %>% 
+  add_row(States = "formulae", `Inmates per officer (persons, 2016-17)` = "total inmates/prison officers(Supdt, Dy. Supdt, Asstt. Supdt, Jailor, Dy. Jailor, Asstt. Jailor, Other Officers)", 
+         `Inmates per cadre staff (persons, 2016-17)` = "total inmates/cadre staff(HEAD WARDERS/HEAD MATRON, WARDER/MATRON, OTHERS)",
+         `Inmates per correctional staff (persons, 2016-17)` = "total inmates/correctional staff(PROBATION OFFICER/WELFARE OFFICER, PHYCHOLOGISTS / PSYCHIATRISTS, SOCIAL WORKER/OTHERS",
+         `Occupancy (%, 2016-17)` = "(inmates/available capacity)*100",
+         `Officers, vacancy (%, 2016-17)` = "100-(sum(Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (approved)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (approved)`, `Officers: OTHERS (approved)`)/sum(Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (sanctioned)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (sanctioned)`, `Officers: OTHERS (sanctioned))*100)",
+         `Cadre staff, vacancy (%, 2016-17)` = "100-(sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (Approved)`,`Jail Cadre Staff: WARDER / MATRON (Approved)`, `Jail Cadre Staff: OTHERS (approved)`)/sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (sanctioned)`, `Jail Cadre Staff: WARDER / MATRON (Sanctioned)`, `Jail Cadre Staff: OTHERS (sanctioned)`)*100",
+         `Correctional staff, vacancy(%, 2016-17)` = "100-(sum(PROBATION OFFICER/WELFARE OFFICER (approved)`, `PHYCHOLOGISTS/PSYCHIATRISTS (Approved)`, `SOCIAL WORKER/OTHERS (Approved)`)/sum(PROBATION OFFICER/WELFARE OFFICER (Sanctioned)`, PHYCHOLOGISTS/PSYCHIATRISTS (sanctioned)`, SOCIAL WORKER/OTHERS (Sanctioned)`))*100",
+         `Medical staff, vacancy (%, 2016-17)` = "100-(sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`, `Medical Staff: PHARMACISTS (Approved)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT(approved)`, `Medical Staff: OTHERS (Approved)`)/sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`, `Medical Staff: PHARMACISTS (sanctioned)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT (Sanctioned)`, `Medical Staff: OTHERS (sanctioned)`)*100",
+         `Medical officers, vacancy (%, 2016-17)` = "100-(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`/`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`)*100",
+         `Women in prison staff (persons, 2016-17)` = "(women staff/total prison staff)*100",
+         `Spend per inmate (Rs, 2016-17)` = "prison expenditure/total inmates", 
+         `Prison budget used (%, 2016-17)` = "prison expenditure/prison budget*100",
+         `Officer vacancy (% points, 2012-17)` = "average of five year annual change in officer vancacies",
+         `Cadre staff vacancy (% points, 2012-17)` = "average of five year annual change in cadre staff vacancies",
+         `Share of women in prison staff (% points, 2012-17)` = "average of five year annual change in share of women in prison staff",
+         `Inmates per prison officer (%, 2012-17)` = "average of five year annual change in inmates per prison officer", 
+         `Inmates per cadre staff (%, 2012-17)` = "average of five year annual change in inmates per cadre staff",
+         `Share of UTPs (% points, 2012-17) ` = "average of five year annual change in UTP population",
+         `Spend per inmate (%, 2012-17)` = "average of five year annual change in spend per inmate",
+         `Budget used (% points, 2012-17)` = "average of five year annual change in budget utilization",
+         `budget_comparison` = "Average of five year annual change in pillar expenditure - average of five year annual change in state expenditure")
+
+```
+
+
+```{r}
+
+sheets <- list("Source data" = source_data, "Derived data yearwise" = prison_indicators,"Derived Data latest" = prison_latest, "formulae" = prison_formulae, "Small states" = prison_small_score, "Large and mid states" = prison_large_mid_score, "Conflict States" = prison_CS_score, "UTs" = prison_UT_score)
+
+write_xlsx(sheets, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Prison/Prison_sheet.xlsx")
+
+
+
+```
+
+
+```{r}
+
+sheet1 <- list("Derived Data latest" = prison_latest, "prison_score" = prison_score, "Small states" = prison_small_score, "Large and mid states" = prison_large_mid_score)
+
+write_xlsx(sheet1, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Web design/Prison_sheet.xlsx")
+
+```
+
+
+```{r}
+
+colnames(prison_latest)
+
+```
+
+
+```{r}
+
+library(reshape2)
+
+prison_m <- melt(prison_latest, id.vars = c("States", "Clusters"), measure.vars = c("Inmates per officer (persons, 2016-17)",            
+ "Inmates per cadre staff (persons, 2016-17)" ,        "Inmates per correctional staff (persons, 2016-17)" ,
+ "Occupancy (%, 2016-17)"              ,               "Officers, vacancy (%, 2016-17)"  ,                  
+ "Cadre staff, vacancy (%, 2016-17)"     ,             "Correctional staff, vacancy(%, 2016-17)"  ,         
+ "Medical staff, vacancy (%, 2016-17)"    ,            "Medical officers, vacancy (%, 2016-17)"    ,        
+"Women in prison staff (persons, 2016-17)" ,          "Spend per inmate (Rs, 2016-17)"              ,      
+"Prison budget used (%, 2016-17)"           ,         "Officer vacancy (% points, 2012-17)"          ,     
+"Cadre staff vacancy (% points, 2012-17)"    ,        "Share of women in prison staff (% points, 2012-17)",
+"Inmates per prison officer (%, 2012-17)"     ,       "Inmates per cadre staff (%, 2012-17)"              ,
+"Share of UTPs (% points, 2012-17) "           ,      "Spend per inmate (%, 2012-17)"                     ,
+"Budget used (% points, 2012-17)"         ,           "budget_comparison"    ))
+
+prison_score_lm <- melt(prison_large_mid_score, id.vars = c("States"), measure.vars = c("Inmates per officer (persons, 2016-17)",            "Inmates per cadre staff (persons, 2016-17)" ,        "Inmates per correctional staff (persons, 2016-17)" ,
+ "Occupancy (%, 2016-17)"              ,               "Officers, vacancy (%, 2016-17)"  ,                  
+ "Cadre staff, vacancy (%, 2016-17)"     ,             "Correctional staff, vacancy(%, 2016-17)"  ,         
+ "Medical staff, vacancy (%, 2016-17)"    ,            "Medical officers, vacancy (%, 2016-17)"    ,        
+"Women in prison staff (persons, 2016-17)" ,          "Spend per inmate (Rs, 2016-17)"              ,      
+"Prison budget used (%, 2016-17)"           ,         "Officer vacancy (% points, 2012-17)"          ,     
+"Cadre staff vacancy (% points, 2012-17)"    ,        "Share of women in prison staff (% points, 2012-17)",
+"Inmates per prison officer (%, 2012-17)"     ,       "Inmates per cadre staff (%, 2012-17)"              ,
+"Share of UTPs (% points, 2012-17) "           ,      "Spend per inmate (%, 2012-17)"                     ,
+"Budget used (% points, 2012-17)"         ,           "budget_comparison"   ))
+
+colnames(prison_score_lm)[3] <- "score"
+
+prison_m_low <- prison_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+prison_m_high <- prison_m %>% 
+  filter(Clusters =="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+prison_m_mid_large <- prison_m %>% 
+  filter(Clusters=="Large and Mid States")
+
+prison_m_mid_large <- left_join(prison_m_mid_large, prison_m_high, by = "variable") 
+prison_m_mid_large <- left_join(prison_m_mid_large, prison_m_low, by = "variable")
+
+
+# FOR LARGE AND MID STATES
+
+prison_m_mid_large <- prison_m_mid_large %>% 
+  mutate("Themes" = case_when(
+   variable == "Inmates per officer (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ "Workload",
+    variable == "Occupancy (%, 2016-17)" ~ "Infrastructure",
+    variable == "Officers, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ "Human Resources",
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ "Human Resources" ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ "Diversity" ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ "Budget",
+    variable == "Prison budget used (%, 2016-17)" ~ "Budget",
+    variable == "Officer vacancy (% points, 2012-17)" ~ "Trends",
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ "Trends" ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ "Trends",
+    variable == "Inmates per prison officer (%, 2012-17)" ~ "Trends" ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ "Trends",
+    variable == "Share of UTPs (% points, 2012-17) " ~ "Trends",
+    variable == "Spend per inmate (%, 2012-17)" ~ "Trends" ,
+    variable == "Budget used (% points, 2012-17)" ~ "Trends",
+     variable == "budget_comparison" ~ "Trends")) %>% 
+  mutate("worst value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Inmates per officer (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Occupancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Officers, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Women in prison staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Prison budget used (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Officer vacancy (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Share of UTPs (% points, 2012-17) "&prison_m_mid_large$States=="Punjab")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Spend per inmate (%, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Budget used (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+     variable == "budget_comparison" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="budget_comparison"&prison_m_mid_large$States=="Punjab")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Inmates per officer (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Occupancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Officers, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Women in prison staff (persons, 2016-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Prison budget used (%, 2016-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Officer vacancy (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_mid_large$lowvalue[which(prison_m_mid_large$variable =="Share of UTPs (% points, 2012-17) "&prison_m_mid_large$States=="Punjab")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Spend per inmate (%, 2012-17)"&prison_m_mid_large$States=="Punjab")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="Budget used (% points, 2012-17)"&prison_m_mid_large$States=="Punjab")],
+     variable == "budget_comparison" ~ prison_m_mid_large$highvalue[which(prison_m_mid_large$variable =="budget_comparison"&prison_m_mid_large$States=="Punjab")]))
+
+prison_m_mid_large <- left_join(prison_m_mid_large,prison_score_lm,by=c("States", "variable"))
+
+prison_m_mid_large <- prison_m_mid_large %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+  
+    
+```
+
+For Small States
+
+```{r}
+
+prison_m_low1 <- prison_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+prison_m_high1 <- prison_m %>% 
+  filter(Clusters =="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+prison_m_small <- prison_m %>% 
+  filter(Clusters=="Small States")
+
+prison_m_small <- left_join(prison_m_small, prison_m_high1, by = "variable") 
+prison_m_small <- left_join(prison_m_small, prison_m_low1, by = "variable")
+
+prison_score_small <- melt(prison_small_score, id.vars = c("States"), measure.vars = c("Inmates per officer (persons, 2016-17)",            "Inmates per cadre staff (persons, 2016-17)" ,        "Inmates per correctional staff (persons, 2016-17)" ,
+ "Occupancy (%, 2016-17)"              ,               "Officers, vacancy (%, 2016-17)"  ,                  
+ "Cadre staff, vacancy (%, 2016-17)"     ,             "Correctional staff, vacancy(%, 2016-17)"  ,         
+ "Medical staff, vacancy (%, 2016-17)"    ,            "Medical officers, vacancy (%, 2016-17)"    ,        
+"Women in prison staff (persons, 2016-17)" ,          "Spend per inmate (Rs, 2016-17)"              ,      
+"Prison budget used (%, 2016-17)"           ,         "Officer vacancy (% points, 2012-17)"          ,     
+"Cadre staff vacancy (% points, 2012-17)"    ,        "Share of women in prison staff (% points, 2012-17)",
+"Inmates per prison officer (%, 2012-17)"     ,       "Inmates per cadre staff (%, 2012-17)"              ,
+"Share of UTPs (% points, 2012-17) "           ,      "Spend per inmate (%, 2012-17)"                     ,
+"Budget used (% points, 2012-17)"         ,           "budget_comparison"))
+
+colnames(prison_score_small)[3] <- "score"
+
+prison_m_small <- prison_m_small %>% 
+  mutate("Themes" = case_when(
+   variable == "Inmates per officer (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ "Workload",
+    variable == "Occupancy (%, 2016-17)" ~ "Infrastructure",
+    variable == "Officers, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ "Human Resources",
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ "Human Resources" ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ "Diversity" ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ "Budget",
+    variable == "Prison budget used (%, 2016-17)" ~ "Budget",
+    variable == "Officer vacancy (% points, 2012-17)" ~ "Trends",
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ "Trends" ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ "Trends",
+    variable == "Inmates per prison officer (%, 2012-17)" ~ "Trends" ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ "Trends",
+    variable == "Share of UTPs (% points, 2012-17) " ~ "Trends",
+    variable == "Spend per inmate (%, 2012-17)" ~ "Trends" ,
+    variable == "Budget used (% points, 2012-17)" ~ "Trends",
+     variable == "budget_comparison" ~ "Trends"))
+
+prison_m_small <- prison_m_small %>%   
+      mutate("worst value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_small$highvalue[which(prison_m_small$variable =="Inmates per officer (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Occupancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Officers, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Women in prison staff (persons, 2016-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Prison budget used (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Officer vacancy (% points, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_small$highvalue[which(prison_m_small$variable =="Share of UTPs (% points, 2012-17) "&prison_m_small$States=="Goa")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Spend per inmate (%, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Budget used (% points, 2012-17)"&prison_m_small$States=="Goa")],
+     variable == "budget_comparison" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="budget_comparison"&prison_m_small$States=="Goa")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_small$lowvalue[which(prison_m_small$variable =="Inmates per officer (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Occupancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Officers, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Women in prison staff (persons, 2016-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Prison budget used (%, 2016-17)"&prison_m_small$States=="Goa")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Officer vacancy (% points, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_small$States=="Goa")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_small$lowvalue[which(prison_m_small$variable =="Share of UTPs (% points, 2012-17) "&prison_m_small$States=="Goa")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Spend per inmate (%, 2012-17)"&prison_m_small$States=="Goa")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_small$highvalue[which(prison_m_small$variable =="Budget used (% points, 2012-17)"&prison_m_small$States=="Goa")],
+     variable == "budget_comparison" ~ prison_m_small$highvalue[which(prison_m_small$variable =="budget_comparison"&prison_m_small$States=="Goa")]))
+    
+
+prison_m_small <- left_join(prison_m_small,prison_score_small,by=c("States", "variable"))
+
+prison_m_small <- prison_m_small %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+
+For UTs
+```{r}
+
+prison_m_low2 <- prison_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+prison_m_high2 <- prison_m %>% 
+  filter(Clusters =="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+prison_m_UT <- prison_m %>% 
+  filter(Clusters=="Union Territory")
+
+prison_m_UT <- left_join(prison_m_UT, prison_m_high2, by = "variable") 
+prison_m_UT <- left_join(prison_m_UT, prison_m_low2, by = "variable")
+
+prison_score_UT <- melt(prison_UT_score, id.vars = c("States"), measure.vars = c("Inmates per officer (persons, 2016-17)",            "Inmates per cadre staff (persons, 2016-17)" ,        "Inmates per correctional staff (persons, 2016-17)" ,
+ "Occupancy (%, 2016-17)"              ,               "Officers, vacancy (%, 2016-17)"  ,                  
+ "Cadre staff, vacancy (%, 2016-17)"     ,             "Correctional staff, vacancy(%, 2016-17)"  ,         
+ "Medical staff, vacancy (%, 2016-17)"    ,            "Medical officers, vacancy (%, 2016-17)"    ,        
+"Women in prison staff (persons, 2016-17)" ,          "Spend per inmate (Rs, 2016-17)"              ,      
+"Prison budget used (%, 2016-17)"           ,         "Officer vacancy (% points, 2012-17)"          ,     
+"Cadre staff vacancy (% points, 2012-17)"    ,        "Share of women in prison staff (% points, 2012-17)",
+"Inmates per prison officer (%, 2012-17)"     ,       "Inmates per cadre staff (%, 2012-17)"              ,
+"Share of UTPs (% points, 2012-17) "           ,      "Spend per inmate (%, 2012-17)"                     ,
+"Budget used (% points, 2012-17)"         ,           "budget_comparison"))
+
+colnames(prison_score_UT)[3] <- "score"
+
+
+prison_m_UT <- prison_m_UT %>% 
+  mutate("Themes" = case_when(
+   variable == "Inmates per officer (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ "Workload",
+    variable == "Occupancy (%, 2016-17)" ~ "Infrastructure",
+    variable == "Officers, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ "Human Resources",
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ "Human Resources" ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ "Diversity" ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ "Budget",
+    variable == "Prison budget used (%, 2016-17)" ~ "Budget",
+    variable == "Officer vacancy (% points, 2012-17)" ~ "Trends",
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ "Trends" ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ "Trends",
+    variable == "Inmates per prison officer (%, 2012-17)" ~ "Trends" ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ "Trends",
+    variable == "Share of UTPs (% points, 2012-17) " ~ "Trends",
+    variable == "Spend per inmate (%, 2012-17)" ~ "Trends" ,
+    variable == "Budget used (% points, 2012-17)" ~ "Trends",
+     variable == "budget_comparison" ~ "Trends"))
+
+prison_m_UT <- prison_m_UT %>%   
+      mutate("worst value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Inmates per officer (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Occupancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Officers, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Women in prison staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Prison budget used (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Officer vacancy (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Share of UTPs (% points, 2012-17) "&prison_m_UT$States=="Puducherry")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Spend per inmate (%, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Budget used (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+     variable == "budget_comparison" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="budget_comparison"&prison_m_UT$States=="Puducherry")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Inmates per officer (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Occupancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Officers, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Women in prison staff (persons, 2016-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Prison budget used (%, 2016-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Officer vacancy (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_UT$States=="Puducherry")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_UT$lowvalue[which(prison_m_UT$variable =="Share of UTPs (% points, 2012-17) "&prison_m_UT$States=="Puducherry")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Spend per inmate (%, 2012-17)"&prison_m_UT$States=="Puducherry")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="Budget used (% points, 2012-17)"&prison_m_UT$States=="Puducherry")],
+     variable == "budget_comparison" ~ prison_m_UT$highvalue[which(prison_m_UT$variable =="budget_comparison"&prison_m_UT$States=="Puducherry")]))
+
+prison_m_UT <- left_join(prison_m_UT,prison_score_UT,by=c("States", "variable"))
+
+prison_m_UT <- prison_m_UT %>% 
+  group_by(variable) %>% 
+ mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+For Conflict States
+```{r}
+
+prison_m_low3 <- prison_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+prison_m_high3 <- prison_m %>% 
+  filter(Clusters =="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+prison_m_CS <- prison_m %>% 
+  filter(Clusters=="Conflict States")
+
+prison_m_CS <- left_join(prison_m_CS, prison_m_high3, by = "variable") 
+prison_m_CS <- left_join(prison_m_CS, prison_m_low3, by = "variable")
+
+prison_score_CS <- melt(prison_CS_score, id.vars = c("States"), measure.vars = c("Inmates per officer (persons, 2016-17)",            "Inmates per cadre staff (persons, 2016-17)" ,        "Inmates per correctional staff (persons, 2016-17)" ,
+ "Occupancy (%, 2016-17)"              ,               "Officers, vacancy (%, 2016-17)"  ,                  
+ "Cadre staff, vacancy (%, 2016-17)"     ,             "Correctional staff, vacancy(%, 2016-17)"  ,         
+ "Medical staff, vacancy (%, 2016-17)"    ,            "Medical officers, vacancy (%, 2016-17)"    ,        
+"Women in prison staff (persons, 2016-17)" ,          "Spend per inmate (Rs, 2016-17)"              ,      
+"Prison budget used (%, 2016-17)"           ,         "Officer vacancy (% points, 2012-17)"          ,     
+"Cadre staff vacancy (% points, 2012-17)"    ,        "Share of women in prison staff (% points, 2012-17)",
+"Inmates per prison officer (%, 2012-17)"     ,       "Inmates per cadre staff (%, 2012-17)"              ,
+"Share of UTPs (% points, 2012-17) "           ,      "Spend per inmate (%, 2012-17)"                     ,
+"Budget used (% points, 2012-17)"         ,           "budget_comparison"))
+
+colnames(prison_score_CS)[3] <- "score"
+
+
+prison_m_CS <- prison_m_CS %>% 
+  mutate("Themes" = case_when(
+   variable == "Inmates per officer (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ "Workload",
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ "Workload",
+    variable == "Occupancy (%, 2016-17)" ~ "Infrastructure",
+    variable == "Officers, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ "Human Resources",
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ "Human Resources",
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ "Human Resources" ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ "Diversity" ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ "Budget",
+    variable == "Prison budget used (%, 2016-17)" ~ "Budget",
+    variable == "Officer vacancy (% points, 2012-17)" ~ "Trends",
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ "Trends" ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ "Trends",
+    variable == "Inmates per prison officer (%, 2012-17)" ~ "Trends" ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ "Trends",
+    variable == "Share of UTPs (% points, 2012-17) " ~ "Trends",
+    variable == "Spend per inmate (%, 2012-17)" ~ "Trends" ,
+    variable == "Budget used (% points, 2012-17)" ~ "Trends",
+     variable == "budget_comparison" ~ "Trends"))
+
+prison_m_CS <- prison_m_CS %>%   
+      mutate("worst value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Inmates per officer (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Occupancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Officers, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Women in prison staff (persons, 2016-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Prison budget used (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Officer vacancy (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Share of UTPs (% points, 2012-17) "&prison_m_CS$States=="Assam")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Spend per inmate (%, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Budget used (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+     variable == "budget_comparison" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="budget_comparison"&prison_m_CS$States=="Assam")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "Inmates per officer (persons, 2016-17)"~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Inmates per officer (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per cadre staff (persons, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Inmates per cadre staff (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per correctional staff (persons, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Inmates per correctional staff (persons, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Occupancy (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Occupancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Officers, vacancy (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Officers, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Cadre staff, vacancy (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Cadre staff, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Correctional staff, vacancy(%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Correctional staff, vacancy(%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Medical staff, vacancy (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Medical staff, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Medical officers, vacancy (%, 2016-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Medical officers, vacancy (%, 2016-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Women in prison staff (persons, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Women in prison staff (persons, 2016-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Spend per inmate (Rs, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Spend per inmate (Rs, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Prison budget used (%, 2016-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Prison budget used (%, 2016-17)"&prison_m_CS$States=="Assam")],
+    variable == "Officer vacancy (% points, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Officer vacancy (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Cadre staff vacancy (% points, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Cadre staff vacancy (% points, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Share of women in prison staff (% points, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Share of women in prison staff (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Inmates per prison officer (%, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Inmates per prison officer (%, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Inmates per cadre staff (%, 2012-17)" ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Inmates per cadre staff (%, 2012-17)"&prison_m_CS$States=="Assam")],
+    variable == "Share of UTPs (% points, 2012-17) " ~ prison_m_CS$lowvalue[which(prison_m_CS$variable =="Share of UTPs (% points, 2012-17) "&prison_m_CS$States=="Assam")],
+    variable == "Spend per inmate (%, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Spend per inmate (%, 2012-17)"&prison_m_CS$States=="Assam")] ,
+    variable == "Budget used (% points, 2012-17)" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="Budget used (% points, 2012-17)"&prison_m_CS$States=="Assam")],
+     variable == "budget_comparison" ~ prison_m_CS$highvalue[which(prison_m_CS$variable =="budget_comparison"&prison_m_CS$States=="Assam")]))
+
+prison_m_CS <- left_join(prison_m_CS,prison_score_CS,by=c("States", "variable"))
+
+prison_m_CS <- prison_m_CS %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+```
+
+RBINDING sheets
+
+```{r}
+
+prison_mf <- rbind(prison_m_mid_large, prison_m_small)
+prison_mf <- rbind(prison_mf, prison_m_UT)
+prison_mf <- rbind(prison_mf, prison_m_CS)
+
+```
+
+
+```{r}
+write_xlsx(prison_mf, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Design/prison_design.xlsx")
+
+```
+
+
+```{r}
+
+officers11 <- officers %>% 
+  rowwise() %>% 
+  mutate("officers_approved" = ((sum(`Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (approved)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (approved)`, `Officers: OTHERS (approved)`, na.rm = TRUE)/(sum(`Officers: DG/ADDL.IG/IG/ DIG.AIG/SUPDT (Sanctioned)`, `Officers: DY.SP/JAILOR/DY.JAILOR/ ASST.JAILOR/ASST.SUPDT (Sanctioned)`, `Officers: OTHERS (Sanctioned)`, na.rm = TRUE))))) %>% 
+  mutate("JC_vacancy" = ((sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (Approved)`,`Jail Cadre Staff: WARDER / MATRON (Approved)`, `Jail Cadre Staff: OTHERS (approved)`, na.rm = TRUE)/sum(`Jail Cadre Staff: HEAD WARDERS / HEAD MATRON (sanctioned)`, `Jail Cadre Staff: WARDER / MATRON (Sanctioned)`, `Jail Cadre Staff: OTHERS (sanctioned)`, na.rm = TRUE)))) %>% 
+  mutate("CS_vacancy" = ((sum(`CORRECTIONAL STAFF : PROBATION OFFICER / WELFARE OFFICER (approved)`, `Correctional Staff: PHYCHOLOGISTS / PSYCHIATRISTS (Approved)`, `Correctional Staff: SOCIAL WORKER / OTHERS (Approved)`, na.rm= TRUE)/sum(`Correctional Staff: PROBATION OFFICER / WELFARE OFFICER (Sanctioned)`, `CORRECTIONAL STAFF: PHYCHOLOGISTS / PSYCHIATRISTS (sanctioned)`, `Correctional Staff: SOCIAL WORKER / OTHERS (Sanctioned)`, na.rm = TRUE)))) %>% 
+  mutate("MS_vacancy" = ((sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`, `Medical Staff: PHARMACISTS (Approved)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT(approved)`, `Medical Staff: OTHERS (Approved)`, na.rm = TRUE)/sum(`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`, `Medical Staff: PHARMACISTS (sanctioned)`, `Medical Staff: LAB TECHNICIAN / LAB ATTENDANT (Sanctioned)`, `Medical Staff: OTHERS (sanctioned)`, na.rm = TRUE)))) %>% 
+  mutate("MO_vacancy" = ((`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (approved)`/`Medical Staff: RESIDENT MEDICAL OFFICER / MEDICAL OFFICER (sanctioned)`)))
+
+```
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1035 @@
+---
+title: "LegalAid"
+output: html_document
+---
+
+
+
+```{r}
+
+library (dplyr)
+library (readxl)
+library(writexl)
+library (DT)
+library(lettercase)
+library (RSQLite)
+library(data.table)
+library (hablar)
+library(tidyverse)
+
+```
+
+Indicators
+
+Workload
+1.PLA cases: Cases settled as % of received (%, 2017-18)
+2.NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)
+3.SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2016-17)
+4.Lok Adalats held by SLSAs: Cases settled as percentage of cases received (%, 2017-18) (**Data not available**)
+
+Infrastructure
+1.DLSAs as % of state judicial districts (%, as of Sept'18)
+2.Villages per LS clinic (number, 2017-18)
+3.LS clinics per jail (number, 2017-18)
+
+Human Resources
+1. DLSA Secy vacancy (%, as of Sept'18)
+2. PLVs per lakh population (number, as of Jan'19)
+3. Sanctioned secys as % of DLSAs (%, 2017-18)
+
+Diversity
+1.Women panel lawyers (%, Jan'19)
+2.Women PLVs (%, as of Jan'19)
+
+Budgets
+1. NALSA fund utilised (%, 2017-18)
+2. Share of state spend in total legal aid expenditure (share of state (SLSA budget) in total legal aid expenditure (NALSA + SLSA))
+
+Collect data for:
+
+1. prisons
+2. Fill budget holes
+
+*Theme*: **Budget**
+1 *Indicator*: **NALSA fund utilised (%, 2017-18)**
+```{r}
+
+payments <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/NALSA expenditure.xlsx")
+
+IN1 <- payments %>% 
+  select("States", "Year", "Nalsa utilization (%)")
+
+```
+
+2. State's legal aid share as percentage of overall expenditure
+
+```{r}
+
+state <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/State's expenditure on legal aid.xlsx", sheet = "data")
+
+state_fund <- left_join(state, payments, by = c("States", "Year"))
+
+state_fund$`Budget Allocation from the State Govt. for administrative functions including salaries, infrastructure, etc.` <- as.numeric(state_fund$`Budget Allocation from the State Govt. for administrative functions including salaries, infrastructure, etc.`)
+
+state_fund$`Grants, released by the State Govt. in the State Legal Aid Fund for carrying out legal services programmes under Section 16 (1) (b) of Legal Services Authorities Act, 1987` <- as.numeric(state_fund$`Grants, released by the State Govt. in the State Legal Aid Fund for carrying out legal services programmes under Section 16 (1) (b) of Legal Services Authorities Act, 1987`)
+
+state_fund <- state_fund %>% 
+  rowwise() %>% 
+  mutate(share = sum(`Budget Allocation from the State Govt. for administrative functions including salaries, infrastructure, etc.`, `Grants, released by the State Govt. in the State Legal Aid Fund for carrying out legal services programmes under Section 16 (1) (b) of Legal Services Authorities Act, 1987`,na.rm = TRUE) /sum(`Budget Allocation from the State Govt. for administrative functions including salaries, infrastructure, etc.`, `Grants, released by the State Govt. in the State Legal Aid Fund for carrying out legal services programmes under Section 16 (1) (b) of Legal Services Authorities Act, 1987`, `Total Expenditure out of NALSA Fund during 201718`, `Total unutilised out of NALSA FUND`,na.rm = TRUE)*100)
+
+IN2 <- state_fund %>% 
+  select("States", "Year", "share")
+
+```
+
+
+*Theme*: **Diversity**
+
+1. *Indicator*: **Women panel lawyers (%, Jan'19)**
+```{r}
+
+women_panel <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/legal aid indicators.xlsx", sheet = "panel lawyers")
+
+women_panel_1 <- women_panel %>% 
+  select("States", "Year", "Panel lawyers: Female", "Panel lawyers: Total") %>% 
+  mutate("Share of women" = (`Panel lawyers: Female`/`Panel lawyers: Total`*100))
+
+IN3 <- women_panel_1 %>% 
+  select ("States", "Year", "Share of women")
+
+
+```
+
+2. Women PLVs (%, as of Jan'19)
+```{r}
+
+women_PLVs <- women_panel %>% 
+  select ("States", "Year", "PLVS: Female", "PLVs: Total") %>% 
+  mutate("share of women PLVs" = (`PLVS: Female`/`PLVs: Total`*100))
+
+IN4 <- women_PLVs %>% 
+  select("States", "Year", "share of women PLVs")
+
+
+```
+
+*Theme*: **Human Resource**
+
+1. **Indicator**: DLSA Secy vacancy (%, as of Sept'18)
+
+```{r}
+
+DLSAs_sec <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/Judicial districts, DLSAs.xlsx")
+
+DLSAs_sec$`Full time secretaries of DLSA's sanctioned` <- as.numeric(DLSAs_sec$`Full time secretaries of DLSA's sanctioned`)
+DLSAs_sec$`Full time secretaries of DLSA's appointed` <- as.numeric(DLSAs_sec$`Full time secretaries of DLSA's appointed`   )
+
+DLSAs_1 <- DLSAs_sec %>% 
+  select("States", "Year", "Full time secretaries of DLSA's sanctioned", "Full time secretaries of DLSA's appointed") %>% 
+  mutate("DLSA act to sanc" = (`Full time secretaries of DLSA's appointed`/`Full time secretaries of DLSA's sanctioned`*100)) %>% 
+  mutate("DLSA vacancy" = (100 - (`Full time secretaries of DLSA's appointed`/`Full time secretaries of DLSA's sanctioned`*100)))
+
+IN5 <- DLSAs_1 %>% 
+  select("States", "Year", "DLSA vacancy")
+
+
+```
+
+2. PLVs per lakh population (number, as of Jan'19)
+```{r}
+
+population <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/total_pop.xlsx")
+PLVs <- women_panel %>% 
+  select("States", "Year", "PLVs: Total")
+
+PLVs$Year <- as.numeric(PLVs$Year)
+
+PLVs_per_lakh <- left_join(PLVs,population, by = c("States", "Year"))
+
+PLVs_per_lakh <- PLVs_per_lakh %>% 
+  mutate("PLVs_per_lakh" = (`PLVs: Total`/ `Population (PCA)`*100000))
+
+IN6 <- PLVs_per_lakh %>% 
+  select("States", "Year", "PLVs_per_lakh")
+
+```
+
+3. Sanctioned secys as % of DLSAs (%, 2017-18)
+```{r}
+
+judicial_districts <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/Judicial districts, DLSAs.xlsx")
+
+share_dlsa_1 <-judicial_districts %>% 
+  select ("States", "Year", "Total No. of DLSAs", "Full time secretaries of DLSA's sanctioned") %>% 
+  mutate("share_sec" = (`Full time secretaries of DLSA's sanctioned`/`Total No. of DLSAs`*100))
+
+IN7 <- share_dlsa_1 %>% 
+  select("States", "Year", "share_sec")
+
+```
+
+**Theme** : **Infrastructure**
+
+1.*Indicator*: **DLSAs as % of state judicial districts (%, as of Sept'18)**
+
+```{r}
+
+judicial_districts <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/Judicial districts, DLSAs.xlsx")
+
+share_dlsa <-judicial_districts %>% 
+  mutate("share_dlsa" = (`Total No. of DLSAs`/`Total No. of Judicial Districts` *100))
+
+IN8 <- share_dlsa %>% 
+  select("States", "Year", "share_dlsa")
+
+```
+
+2.Villages per LS clinic (number, 2017-18)
+```{r}
+
+LSC_villages <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/Legal service clinics villages.xlsx")
+
+LSC_villages_1 <- LSC_villages %>% 
+  dplyr::select ("States", "Year", "Number of villages per legal service clinic")
+
+IN9 <- LSC_villages_1 %>% 
+  mutate("Number of villages per legal service clinic" = `Number of villages per legal service clinic`)
+
+```
+
+3.LS clinics per jail (number, 2017-18)
+
+*******Benchmark: 1:1 - one legal aid clinic per jail*****
+
+Legal aid clinics: 2017
+Number of villages: 2011
+Number of jails : 2016
+
+```{r}
+
+LSC_jails <- LSC_villages %>% 
+  select("States", "Year", "legal aid clinic per jail")
+
+IN10 <- LSC_jails %>% 
+  mutate(`legal aid clinic per jail` = (`legal aid clinic per jail`))
+
+
+```
+
+**Theme** : **workload**
+1 *Indicator* : *PLA cases: Cases settled as % of received (%, 2017-18)*
+
+```{r}
+
+PLA_cases <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/PLA.xlsx") 
+
+PLA_cases_1 <- PLA_cases %>% 
+  rowwise() %>% 
+  mutate("PLA_Cases" = ((`Cases settled during the months`)/sum(`Cases received during the months`, `Cases pending as on the beginning of the months`, na.rm = TRUE)*100))
+
+IN11 <- PLA_cases_1 %>% 
+  select ("States", "Year", "PLA_Cases")
+  
+```
+
+2*Indicator* : **NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)**
+3*Indicator* : **SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2016-17)**
+
+Lok Adalat : 2017 NALSA
+NLAs: 2017 NALSA
+```{r}
+
+NLAs <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/More data.xlsx")
+
+Lok_adalat <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Legal Aid/Legal Aid data/Legal aid folder for ranking/Lok_Adalat 2017.xlsx")
+
+NLALA <- left_join(NLAs, Lok_adalat, by = c("States", "Year"))
+
+nlala1 <- NLALA %>% 
+  rowwise() %>% 
+  mutate(pre_lit_cases_disposed_off_nlala = round(sum(`National Lok Adalats: Pre- litigation cases disposed of (2017)`, `Pre-Litigation Cases Disposed off`, na.rm = TRUE)/sum(`National Lok Adalats: Total cases disposed of (2017)`, `Total: Disposed of`, na.rm = TRUE)*100,2)) %>% 
+  mutate(LA_total_disposed_off = (`Pre-Litigation Cases Disposed off`/`Total:Taken up`*100))
+
+IN12 <- nlala1 %>% 
+  select("States", "Year", "pre_lit_cases_disposed_off_nlala", "LA_total_disposed_off")
+  
+
+```
+Merge variables
+
+```{r}
+
+legal_aid <- left_join(IN1, IN2, by = "States")
+legal_aid <- left_join(legal_aid, IN3, by = "States")
+legal_aid <- left_join(legal_aid, IN4, by = "States")
+legal_aid <- left_join(legal_aid, IN5, by = "States")
+legal_aid <- left_join(legal_aid, IN6, by = "States")
+legal_aid <- left_join(legal_aid, IN7, by = "States")
+legal_aid <- left_join(legal_aid, IN8, by = "States")
+legal_aid <- left_join(legal_aid, IN9, by = "States")
+legal_aid <- left_join(legal_aid, IN10, by = "States")
+legal_aid <- left_join(legal_aid, IN11, by = "States")
+legal_aid <- left_join(legal_aid, IN12, by = "States")
+
+
+```
+
+```{r}
+legal_aid$Year.x <- NULL 
+legal_aid$Year <- NULL
+legal_aid$Year.y <- NULL 
+legal_aid$Year.x.x <- NULL 
+legal_aid$Year.x.x.x <- NULL 
+legal_aid$Year.x.x.x.x <- NULL 
+legal_aid$Year.x.x.x.x.x <- NULL 
+legal_aid$Year.y.y.y.y.y <- NULL 
+legal_aid$Year.y.y.y.y <- NULL 
+legal_aid$Year.y.y.y <- NULL 
+legal_aid$Year.y.y <- NULL 
+legal_aid$Year.y.y.y.y.y.y <- NULL
+legal_aid$Year.x.x.x.x.x.x <- NULL
+
+```
+
+Rationalize
+**CHANGE NANs and INFs to NAs**
+
+```{r}
+
+legal_aid <- legal_aid %>% rationalize()
+
+
+```
+
+*Change Variable Names*
+
+```{r}
+
+setnames(legal_aid, "Share of women", "Women panel lawyers (%, Jan'19)")
+setnames(legal_aid, "share of women PLVs", "Women PLVs (%, as of Jan'19)")
+setnames(legal_aid, "DLSA vacancy", "DLSA Secy vacancy (%, 2019)")
+setnames(legal_aid, "PLVs_per_lakh", "PLVs per lakh population (number, as of Jan'19)")
+setnames(legal_aid, "share_dlsa", "DLSAs as % of state judicial districts (%, 2019)")
+setnames(legal_aid, "PLA_Cases", "PLA cases: Cases settled as % of received (%, 2017-18)")
+setnames(legal_aid, "share", "State's share in legal aid expenditure (2017-18)")
+setnames(legal_aid, "pre_lit_cases_disposed_off_nlala", "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)")
+setnames(legal_aid, "LA_total_disposed_off", "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)")
+setnames(legal_aid, "legal aid clinic per jail", "LS clinics per jail (number, 2017-18)")
+setnames(legal_aid, "Number of villages per legal service clinic", "Villages per LS clinic (number, 2017-18)")
+setnames(legal_aid, "Nalsa utilization (%)", "NALSA fund utilised (%, 2017-18)")
+setnames(legal_aid, "share_sec", "Sanctioned secys as % of DLSAs (%, 2019)")
+
+```
+
+Clusterization
+```{r}
+
+legal_aid <- legal_aid %>% 
+  mutate("Clusters" = case_when(
+    States %in% c("Lakshadweep", "A&N Islands", "Daman & Diu", "D&N Haveli", "Chandigarh", "Puducherry", "Delhi") ~ "Union Territory",
+    States %in% c("Sikkim", "Mizoram", "Arunachal Pradesh", "Goa", "Meghalaya", "Tripura", "Himachal Pradesh") ~ "Small States",
+    States %in% c("Uttarakhand", "Telangana", "Haryana", "Chhattisgarh", "Punjab",  "Jharkhand", "Kerala", "Odisha", "Gujarat", "Karnataka", "Rajasthan", "Tamil Nadu", "Madhya Pradesh", "Andhra Pradesh", "West Bengal", "Bihar", "Maharashtra", "Uttar Pradesh") ~ "Large and Mid States",
+    States %in% c("Manipur", "Jammu & Kashmir", "Assam", "Nagaland") ~ "Conflict States"
+  )) 
+
+```
+
+EMPTY DATAFRAME
+
+```{r}
+
+legal_score <- legal_aid
+legal_score[1:36,2:15] <- NA
+legal_score[,c("Clusters")] <- list(NULL)
+
+```
+
+Formulaes
+```{r}
+
+
+formula_1 <-function(x) {
+  case_when(!is.infinite(x)|!is.na(x)~(((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+}
+
+formula_2 <-function(x) {
+  case_when(x <= 0 ~ 1,
+            x > 0 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1
+    )    }
+
+formula_3 <-function(x) {
+  case_when(x <= 0 ~ 10,
+            x > 0 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1
+    )    }
+
+formula_4 <-function(x) {
+  case_when(x >= 1 ~ 10,
+            x < 1 ~ (((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1
+    )    }
+
+formula_5 <-function(x) {
+  case_when(x >= 100 ~ 10,
+            x < 100 ~ (((x - min(x, na.rm = TRUE))*9)/(100 - min(x, na.rm = TRUE))) + 1
+    )    }
+
+names(legal_aid)
+```
+
+Scoring
+
+```{r}
+
+fm1_cols <- c("Women panel lawyers (%, Jan'19)",
+             "Women PLVs (%, as of Jan'19)",
+             "PLVs per lakh population (number, as of Jan'19)",
+             "State's share in legal aid expenditure (2017-18)",
+             "PLA cases: Cases settled as % of received (%, 2017-18)",
+             "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)",       
+             "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)")
+
+fm2_cols <- c("Villages per LS clinic (number, 2017-18)")
+
+fm3_cols <- c("DLSA Secy vacancy (%, 2019)")
+
+fm4_cols <- c("LS clinics per jail (number, 2017-18)")
+
+fm5_cols <- c("NALSA fund utilised (%, 2017-18)",
+             "Sanctioned secys as % of DLSAs (%, 2019)",
+             "DLSAs as % of state judicial districts (%, 2019)")
+
+
+```
+
+Scoring
+
+```{r}
+
+legal_score[fm1_cols] <- lapply(legal_aid[fm1_cols], formula_1)
+legal_score[fm2_cols] <- lapply(legal_aid[fm2_cols], formula_2)
+legal_score[fm3_cols] <- lapply(legal_aid[fm3_cols], formula_3)
+legal_score[fm4_cols] <- lapply(legal_aid[fm4_cols], formula_4)
+legal_score[fm5_cols] <- lapply(legal_aid[fm5_cols], formula_5)
+
+
+
+```
+
+Clustering
+```{r}
+
+legal_aid_small <- legal_aid %>% 
+  filter(Clusters == "Small States")
+
+legal_aid_large_mid <- legal_aid %>% 
+  filter(Clusters == "Large and Mid States")
+
+legal_aid_CS <- legal_aid %>% 
+  filter(Clusters == "Conflict States")
+
+legal_aid_UT <- legal_aid %>% 
+  filter(Clusters == "Union Territory")
+
+
+
+```
+
+
+Cluster Scoring - Small States
+
+```{r}
+
+legal_small_score <- legal_aid_small
+legal_small_score[1:7,2:15] <- NA
+legal_small_score[,c("Clusters")] <- list(NULL)
+legal_small_score[fm1_cols] <- lapply(legal_aid_small[fm1_cols], formula_1)
+legal_small_score[fm2_cols] <- lapply(legal_aid_small[fm2_cols], formula_2)
+legal_small_score[fm3_cols] <- lapply(legal_aid_small[fm3_cols], formula_3)
+legal_small_score[fm4_cols] <- lapply(legal_aid_small[fm4_cols], formula_4)
+legal_small_score[fm5_cols] <- lapply(legal_aid_small[fm5_cols], formula_5)
+
+
+```
+
+Scoring - large and mid score
+
+```{r}
+
+legal_large_mid_score <- legal_aid_large_mid
+legal_large_mid_score[1:18,2:15] <- NA
+legal_large_mid_score[,c("Clusters")] <- list(NULL)
+legal_large_mid_score[fm1_cols] <- lapply(legal_aid_large_mid[fm1_cols], formula_1)
+legal_large_mid_score[fm2_cols] <- lapply(legal_aid_large_mid[fm2_cols], formula_2)
+legal_large_mid_score[fm3_cols] <- lapply(legal_aid_large_mid[fm3_cols], formula_3)
+legal_large_mid_score[fm4_cols] <- lapply(legal_aid_large_mid[fm4_cols], formula_4)
+legal_large_mid_score[fm5_cols] <- lapply(legal_aid_large_mid[fm5_cols], formula_5)
+
+```
+
+Scoring - COnflict states
+```{r}
+legal_CS_score <- legal_aid_CS
+legal_CS_score[1:4,2:15] <- NA
+legal_CS_score[,c("Clusters")] <- list(NULL)
+legal_CS_score[fm1_cols] <- lapply(legal_aid_CS[fm1_cols], formula_1)
+legal_CS_score[fm2_cols] <- lapply(legal_aid_CS[fm2_cols], formula_2)
+legal_CS_score[fm3_cols] <- lapply(legal_aid_CS[fm3_cols], formula_3)
+legal_CS_score[fm4_cols] <- lapply(legal_aid_CS[fm4_cols], formula_4)
+legal_CS_score[fm5_cols] <- lapply(legal_aid_CS[fm5_cols], formula_5)
+
+
+```
+
+Scoring - UTs
+```{r}
+
+legal_UT_score <- legal_aid_UT
+legal_UT_score[1:7,2:15] <- NA
+legal_UT_score[,c("Clusters")] <- list(NULL)
+legal_UT_score[fm1_cols] <- lapply(legal_aid_UT[fm1_cols], formula_1)
+legal_UT_score[fm2_cols] <- lapply(legal_aid_UT[fm2_cols], formula_2)
+legal_UT_score[fm3_cols] <- lapply(legal_aid_UT[fm3_cols], formula_3)
+legal_UT_score[fm4_cols] <- lapply(legal_aid_UT[fm4_cols], formula_4)
+legal_UT_score[fm5_cols] <- lapply(legal_aid_UT[fm5_cols], formula_5)
+
+```
+
+
+Benchmark row - small states
+
+```{r}
+
+legal_small_score <- legal_small_score %>% 
+  add_row(States = "Benchmark", 
+         `NALSA fund utilised (%, 2017-18)` = "100% gets 10, below 100% scores as per higher the better rule",                                               
+ `State's share in legal aid expenditure (2017-18)` = "Higher the better"  ,                               
+ `Women panel lawyers (%, Jan'19)` =  "Higher the better",                                                 
+ `Women PLVs (%, as of Jan'19)` = "Higher the better" ,                                                    
+ `DLSA Secy vacancy (%, 2019)`  = "0% gets 10, above 0% scores as per lower the better rule",                                                    
+ `PLVs per lakh population (number, as of Jan'19)`  = "Higher the better" ,                                
+ `Sanctioned secys as % of DLSAs (%, 2019)`  = "100% gets 10, below 100% scores as per higher the better rule",                                       
+ `DLSAs as % of state judicial districts (%, 2019)` = "100% gets 10, below 100% scores as per higher the better rule" ,                                
+ `Villages per LS clinic (number, 2017-18)` = "Lower the better",                                        
+`LS clinics per jail (number, 2017-18)` = "1 and higher gets 10, lower than 1 values score as per higher the better rule" ,                                           
+`PLA cases: Cases settled as % of received (%, 2017-18)` = "higher the better",                           
+`NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)` = "higher the better" ,    
+`SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)` = "higher the better" )
+
+```
+
+Benchmark row - Large and mid states
+
+```{r}
+
+legal_large_mid_score <- legal_large_mid_score %>% 
+  add_row(States = "Benchmark", 
+         `NALSA fund utilised (%, 2017-18)` = "100% gets 10, below 100% scores as per higher the better rule",                                               
+ `State's share in legal aid expenditure (2017-18)` = "Higher the better"  ,                               
+ `Women panel lawyers (%, Jan'19)` =  "Higher the better",                                                 
+ `Women PLVs (%, as of Jan'19)` = "Higher the better" ,                                                    
+ `DLSA Secy vacancy (%, 2019)`  = "0% gets 10, above 0% scores as per lower the better rule",                                                    
+ `PLVs per lakh population (number, as of Jan'19)`  = "Higher the better" ,                                
+ `Sanctioned secys as % of DLSAs (%, 2019)`  = "100% gets 10, below 100% scores as per higher the better rule",                                       
+ `DLSAs as % of state judicial districts (%, 2019)` = "100% gets 10, below 100% scores as per higher the better rule" ,                                
+ `Villages per LS clinic (number, 2017-18)` = "Lower the better",                                        
+`LS clinics per jail (number, 2017-18)` = "1 and higher gets 10, lower than 1 values score as per higher the better rule" ,                                           
+`PLA cases: Cases settled as % of received (%, 2017-18)` = "100% and above scores 10, less than 100%, gets scored as per higher the better rule",                           
+`NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)` = "100% and above scores 10, less than 100%, gets scored as per higher the better rule" ,    
+`SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)` = "100% and above scores 10, less than 100%, gets scored as per higher the better rule" )
+```
+
+Theme row - small states
+
+```{r}
+
+legal_small_score <- legal_small_score %>% 
+  add_row(States = "Themes", 
+         `NALSA fund utilised (%, 2017-18)` = "Budget",
+         `State's share in legal aid expenditure (2017-18)` = "Budget",                               
+         `Women panel lawyers (%, Jan'19)` =  "Diversity",                                                 
+         `Women PLVs (%, as of Jan'19)` = "Diversity" ,                                                   
+         `DLSA Secy vacancy (%, 2019)`  = "Human Resources",
+         `PLVs per lakh population (number, as of Jan'19)`  = "Human Resources" ,                                
+         `Sanctioned secys as % of DLSAs (%, 2019)`  = "Human Resources",
+         `DLSAs as % of state judicial districts (%, 2019)` = "Infrastructure" ,
+         `Villages per LS clinic (number, 2017-18)` = "Infrastructure",                                        
+         `LS clinics per jail (number, 2017-18)` = "Infrastructure",
+         `PLA cases: Cases settled as % of received (%, 2017-18)` = "Workload",                           
+         `NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)` = "Workload" ,    
+         `SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)` = "Workload" )
+
+
+```
+
+Themes row - large and mid states
+
+```{r}
+
+legal_large_mid_score <- legal_large_mid_score %>% 
+  add_row(States = "Themes", 
+         `NALSA fund utilised (%, 2017-18)` = "Budget",
+         `State's share in legal aid expenditure (2017-18)` = "Budget",                               
+         `Women panel lawyers (%, Jan'19)` =  "Diversity",                                                 
+         `Women PLVs (%, as of Jan'19)` = "Diversity" ,                                                   
+         `DLSA Secy vacancy (%, 2019)`  = "Human Resources",
+         `PLVs per lakh population (number, as of Jan'19)`  = "Human Resources" ,                                
+         `Sanctioned secys as % of DLSAs (%, 2019)`  = "Human Resources",
+         `DLSAs as % of state judicial districts (%, 2019)` = "Infrastructure" ,
+         `Villages per LS clinic (number, 2017-18)` = "Infrastructure",                                        
+         `LS clinics per jail (number, 2017-18)` = "Infrastructure",
+         `PLA cases: Cases settled as % of received (%, 2017-18)` = "Workload",                           
+         `NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)` = "Workload" ,    
+         `SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)` = "Workload" )
+
+```
+
+
+```{r}
+
+sheets <- list("Derived Data latest" = legal_aid, "Small states" = legal_small_score, "Large and mid states" = legal_large_mid_score, "UTs" = legal_UT_score, "Conflict States" = legal_CS_score)
+
+write_xlsx(sheets, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Legal Aid/legal_sheet.xlsx")
+
+
+```
+
+For web design
+
+```{r}
+sheets1 <- list("Derived Data latest" = legal_aid, "legal_score" = legal_score   , "Small states" = legal_small_score, "Large and mid states" = legal_large_mid_score)
+
+write_xlsx(sheets1, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Web design/legal_sheet_design.xlsx")
+
+```
+
+
+```{r}
+colnames(legal_aid)
+```
+
+
+```{r}
+
+library(reshape2)
+
+legal_m <- melt(legal_aid, id.vars = c("States", "Clusters"), measure.vars = c("NALSA fund utilised (%, 2017-18)",                    "State's share in legal aid expenditure (2017-18)", "Women panel lawyers (%, Jan'19)",                                                  "Women PLVs (%, as of Jan'19)"                                                     ,
+ "DLSA Secy vacancy (%, 2019)"                                                      ,
+ "PLVs per lakh population (number, as of Jan'19)"                                  ,
+ "Sanctioned secys as % of DLSAs (%, 2019)"                                         ,
+ "DLSAs as % of state judicial districts (%, 2019)"                                 ,
+"Villages per LS clinic (number, 2017-18)"                                         ,
+"LS clinics per jail (number, 2017-18)"                                            ,
+"PLA cases: Cases settled as % of received (%, 2017-18)"                           ,
+"NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"   ,
+"SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"))
+
+legal_score_lm <- melt(legal_large_mid_score, id.vars = c("States"), measure.vars = c("NALSA fund utilised (%, 2017-18)",                    "State's share in legal aid expenditure (2017-18)", "Women panel lawyers (%, Jan'19)",                                                  "Women PLVs (%, as of Jan'19)"                                                     ,
+ "DLSA Secy vacancy (%, 2019)"                                                      ,
+ "PLVs per lakh population (number, as of Jan'19)"                                  ,
+ "Sanctioned secys as % of DLSAs (%, 2019)"                                         ,
+ "DLSAs as % of state judicial districts (%, 2019)"                                 ,
+"Villages per LS clinic (number, 2017-18)"                                         ,
+"LS clinics per jail (number, 2017-18)"                                            ,
+"PLA cases: Cases settled as % of received (%, 2017-18)"                           ,
+"NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"   ,
+"SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"))
+
+colnames(legal_score_lm)[3] <- "score"
+
+legal_m_low <- legal_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+legal_m_high <- legal_m %>% 
+  filter(Clusters =="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+legal_m_mid_large <- legal_m %>% 
+  filter(Clusters=="Large and Mid States")
+
+legal_m_mid_large <- left_join(legal_m_mid_large, legal_m_high, by = "variable") 
+legal_m_mid_large <- left_join(legal_m_mid_large, legal_m_low, by = "variable")
+
+
+# FOR LARGE AND MID STATES
+
+legal_m_mid_large <- legal_m_mid_large %>% 
+  mutate("Themes" = case_when(
+   variable == "NALSA fund utilised (%, 2017-18)" ~ "Budget",
+    variable == "State's share in legal aid expenditure (2017-18)" ~ "Budget",
+    variable == "Women panel lawyers (%, Jan'19)" ~ "Diversity",
+    variable == "Women PLVs (%, as of Jan'19)" ~ "Diversity",
+    variable == "DLSA Secy vacancy (%, 2019)" ~ "Human Resources",
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ "Human Resources",
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ "Human Resources",
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ "Infrastructure",
+    variable == "Villages per LS clinic (number, 2017-18)" ~ "Infrastructure" ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ "Infratstructure" ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ "Workload",
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ "Workload",
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ "Workload"
+    )) %>% 
+  mutate("worst value" = case_when(
+    variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="Women panel lawyers (%, Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="Women PLVs (%, as of Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_mid_large$States=="Punjab")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="LS clinics per jail (number, 2017-18)"&legal_m_mid_large$States=="Punjab")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_mid_large$States=="Punjab")]))%>% 
+  mutate("Best value" = case_when(
+    variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="Women panel lawyers (%, Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="Women PLVs (%, as of Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_mid_large$States=="Punjab")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_mid_large$lowvalue[which(legal_m_mid_large$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_mid_large$States=="Punjab")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="LS clinics per jail (number, 2017-18)"&legal_m_mid_large$States=="Punjab")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_mid_large$States=="Punjab")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_mid_large$highvalue[which(legal_m_mid_large$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_mid_large$States=="Punjab")]
+    ))
+
+legal_m_mid_large <- left_join(legal_m_mid_large,legal_score_lm,by=c("States", "variable"))
+
+legal_m_mid_large <- legal_m_mid_large %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+  
+    
+```
+
+For Small States
+
+```{r}
+
+legal_m_low1 <- legal_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+legal_m_high1 <- legal_m %>% 
+  filter(Clusters =="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+legal_m_small <- legal_m %>% 
+  filter(Clusters=="Small States")
+
+legal_m_small <- left_join(legal_m_small, legal_m_high1, by = "variable") 
+legal_m_small <- left_join(legal_m_small, legal_m_low1, by = "variable")
+
+legal_score_small <- melt(legal_small_score, id.vars = c("States"), measure.vars = c("NALSA fund utilised (%, 2017-18)",                    "State's share in legal aid expenditure (2017-18)", "Women panel lawyers (%, Jan'19)",                                                  "Women PLVs (%, as of Jan'19)"                                                     ,
+ "DLSA Secy vacancy (%, 2019)"                                                      ,
+ "PLVs per lakh population (number, as of Jan'19)"                                  ,
+ "Sanctioned secys as % of DLSAs (%, 2019)"                                         ,
+ "DLSAs as % of state judicial districts (%, 2019)"                                 ,
+"Villages per LS clinic (number, 2017-18)"                                         ,
+"LS clinics per jail (number, 2017-18)"                                            ,
+"PLA cases: Cases settled as % of received (%, 2017-18)"                           ,
+"NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"   ,
+"SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"))
+
+colnames(legal_score_small)[3] <- "score"
+
+legal_m_small <- legal_m_small %>% 
+  mutate("Themes" = case_when(
+   variable == "NALSA fund utilised (%, 2017-18)" ~ "Budget",
+    variable == "State's share in legal aid expenditure (2017-18)" ~ "Budget",
+    variable == "Women panel lawyers (%, Jan'19)" ~ "Diversity",
+    variable == "Women PLVs (%, as of Jan'19)" ~ "Diversity",
+    variable == "DLSA Secy vacancy (%, 2019)" ~ "Human Resources",
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ "Human Resources",
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ "Human Resources",
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ "Infrastructure",
+    variable == "Villages per LS clinic (number, 2017-18)" ~ "Infrastructure" ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ "Infratstructure" ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ "Workload",
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ "Workload",
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ "Workload"))
+
+legal_m_small <- legal_m_small %>%
+  mutate("worst value" = case_when( 
+      variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_small$lowvalue[which(legal_m_small$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_small$States=="Goa")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="Women panel lawyers (%, Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="Women PLVs (%, as of Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_small$States=="Goa")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="LS clinics per jail (number, 2017-18)"&legal_m_small$States=="Goa")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_small$States=="Goa")])) %>% 
+  mutate("Best value" = case_when(
+    variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_small$highvalue[which(legal_m_small$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_small$States=="Goa")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="Women panel lawyers (%, Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="Women PLVs (%, as of Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_small$States=="Goa")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_small$States=="Goa")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_small$lowvalue[which(legal_m_small$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_small$States=="Goa")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="LS clinics per jail (number, 2017-18)"&legal_m_small$States=="Goa")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_small$States=="Goa")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_small$highvalue[which(legal_m_small$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_small$States=="Goa")]))
+    
+
+legal_m_small <- left_join(legal_m_small,legal_score_small,by=c("States", "variable"))
+
+legal_m_small <- legal_m_small %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+
+For UTs
+```{r}
+
+legal_m_low2 <- legal_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+legal_m_high2 <- legal_m %>% 
+  filter(Clusters =="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+legal_m_UT <- legal_m %>% 
+  filter(Clusters=="Union Territory")
+
+legal_m_UT <- left_join(legal_m_UT, legal_m_high2, by = "variable") 
+legal_m_UT <- left_join(legal_m_UT, legal_m_low2, by = "variable")
+
+legal_score_UT <- melt(legal_UT_score, id.vars = c("States"), measure.vars = c("NALSA fund utilised (%, 2017-18)",                    "State's share in legal aid expenditure (2017-18)", "Women panel lawyers (%, Jan'19)",                                                  "Women PLVs (%, as of Jan'19)"                                                     ,
+ "DLSA Secy vacancy (%, 2019)"                                                      ,
+ "PLVs per lakh population (number, as of Jan'19)"                                  ,
+ "Sanctioned secys as % of DLSAs (%, 2019)"                                         ,
+ "DLSAs as % of state judicial districts (%, 2019)"                                 ,
+"Villages per LS clinic (number, 2017-18)"                                         ,
+"LS clinics per jail (number, 2017-18)"                                            ,
+"PLA cases: Cases settled as % of received (%, 2017-18)"                           ,
+"NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"   ,
+"SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"))
+
+colnames(legal_score_UT)[3] <- "score"
+
+
+legal_m_UT <- legal_m_UT %>% 
+  mutate("Themes" = case_when(
+   variable == "NALSA fund utilised (%, 2017-18)" ~ "Budget",
+    variable == "State's share in legal aid expenditure (2017-18)" ~ "Budget",
+    variable == "Women panel lawyers (%, Jan'19)" ~ "Diversity",
+    variable == "Women PLVs (%, as of Jan'19)" ~ "Diversity",
+    variable == "DLSA Secy vacancy (%, 2019)" ~ "Human Resources",
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ "Human Resources",
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ "Human Resources",
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ "Infrastructure",
+    variable == "Villages per LS clinic (number, 2017-18)" ~ "Infrastructure" ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ "Infratstructure" ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ "Workload",
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ "Workload",
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ "Workload"))
+
+legal_m_UT <- legal_m_UT %>%   
+      mutate("worst value" = case_when( 
+      variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="Women panel lawyers (%, Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="Women PLVs (%, as of Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_UT$States=="Delhi")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="LS clinics per jail (number, 2017-18)"&legal_m_UT$States=="Delhi")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_UT$States=="Delhi")])) %>% 
+  mutate("Best value" = case_when(
+    variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_UT$highvalue[which(legal_m_UT$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="Women panel lawyers (%, Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="Women PLVs (%, as of Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_UT$States=="Delhi")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_UT$States=="Delhi")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_UT$lowvalue[which(legal_m_UT$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_UT$States=="Delhi")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="LS clinics per jail (number, 2017-18)"&legal_m_UT$States=="Delhi")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_UT$States=="Delhi")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_UT$highvalue[which(legal_m_UT$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_UT$States=="Delhi")]))
+
+legal_m_UT <- left_join(legal_m_UT,legal_score_UT,by=c("States", "variable"))
+
+legal_m_UT <- legal_m_UT %>% 
+  group_by(variable) %>% 
+ mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+For Conflict States
+```{r}
+
+legal_m_low3 <- legal_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+legal_m_high3 <- legal_m %>% 
+  filter(Clusters =="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+legal_m_CS <- legal_m %>% 
+  filter(Clusters=="Conflict States")
+
+legal_m_CS <- left_join(legal_m_CS, legal_m_high3, by = "variable") 
+legal_m_CS <- left_join(legal_m_CS, legal_m_low3, by = "variable")
+
+legal_score_CS <- melt(legal_CS_score, id.vars = c("States"), measure.vars = c("NALSA fund utilised (%, 2017-18)",                    "State's share in legal aid expenditure (2017-18)", "Women panel lawyers (%, Jan'19)",                                                  "Women PLVs (%, as of Jan'19)"                                                     ,
+ "DLSA Secy vacancy (%, 2019)"                                                      ,
+ "PLVs per lakh population (number, as of Jan'19)"                                  ,
+ "Sanctioned secys as % of DLSAs (%, 2019)"                                         ,
+ "DLSAs as % of state judicial districts (%, 2019)"                                 ,
+"Villages per LS clinic (number, 2017-18)"                                         ,
+"LS clinics per jail (number, 2017-18)"                                            ,
+"PLA cases: Cases settled as % of received (%, 2017-18)"                           ,
+"NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"   ,
+"SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"))
+
+colnames(legal_score_CS)[3] <- "score"
+
+
+legal_m_CS <- legal_m_CS %>% 
+  mutate("Themes" = case_when(
+   variable == "NALSA fund utilised (%, 2017-18)" ~ "Budget",
+    variable == "State's share in legal aid expenditure (2017-18)" ~ "Budget",
+    variable == "Women panel lawyers (%, Jan'19)" ~ "Diversity",
+    variable == "Women PLVs (%, as of Jan'19)" ~ "Diversity",
+    variable == "DLSA Secy vacancy (%, 2019)" ~ "Human Resources",
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ "Human Resources",
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ "Human Resources",
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ "Infrastructure",
+    variable == "Villages per LS clinic (number, 2017-18)" ~ "Infrastructure" ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ "Infratstructure" ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ "Workload",
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ "Workload",
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ "Workload"))
+
+legal_m_CS <- legal_m_CS %>%   
+      mutate("worst value" = case_when( 
+      variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="Women panel lawyers (%, Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="Women PLVs (%, as of Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_CS$States=="Manipur")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="LS clinics per jail (number, 2017-18)"&legal_m_CS$States=="Manipur")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_CS$States=="Manipur")])) %>% 
+  mutate("Best value" = case_when(
+    variable == "NALSA fund utilised (%, 2017-18)"~ legal_m_CS$highvalue[which(legal_m_CS$variable =="NALSA fund utilised (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "State's share in legal aid expenditure (2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="State's share in legal aid expenditure (2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "Women panel lawyers (%, Jan'19)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="Women panel lawyers (%, Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "Women PLVs (%, as of Jan'19)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="Women PLVs (%, as of Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "DLSA Secy vacancy (%, 2019)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="DLSA Secy vacancy (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "PLVs per lakh population (number, as of Jan'19)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="PLVs per lakh population (number, as of Jan'19)"&legal_m_CS$States=="Manipur")],
+    variable == "Sanctioned secys as % of DLSAs (%, 2019)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="Sanctioned secys as % of DLSAs (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "DLSAs as % of state judicial districts (%, 2019)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="DLSAs as % of state judicial districts (%, 2019)"&legal_m_CS$States=="Manipur")],
+    variable == "Villages per LS clinic (number, 2017-18)" ~ legal_m_CS$lowvalue[which(legal_m_CS$variable =="Villages per LS clinic (number, 2017-18)"&legal_m_CS$States=="Manipur")] ,
+    variable == "LS clinics per jail (number, 2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="LS clinics per jail (number, 2017-18)"&legal_m_CS$States=="Manipur")] ,
+    variable == "PLA cases: Cases settled as % of received (%, 2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="PLA cases: Cases settled as % of received (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="NLA+SLSA LAs: Pre-lit cases disposed as % of total cases disposed (%, 2017-18)"&legal_m_CS$States=="Manipur")],
+    variable == "SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)" ~ legal_m_CS$highvalue[which(legal_m_CS$variable =="SLSA LAs: Pre litigation cases disposed as % of total cases taken up (%, 2017-18)"&legal_m_CS$States=="Manipur")]))
+
+legal_m_CS <- left_join(legal_m_CS,legal_score_CS,by=c("States", "variable"))
+
+legal_m_CS <- legal_m_CS %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+```
+
+RBINDING sheets
+
+```{r}
+
+legal_mf <- rbind(legal_m_mid_large, legal_m_small)
+legal_mf <- rbind(legal_mf, legal_m_UT)
+legal_mf <- rbind(legal_mf, legal_m_CS)
+
+```
+
+
+```{r}
+
+write_xlsx(legal_mf, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Design/legal_design.xlsx")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1664 @@
+---
+title: "Police"
+output: html_document
+---
+
+
+
+```{r}
+
+library (dplyr)
+library (readxl)
+library(writexl)
+library (DT)
+library(lettercase)
+library (RSQLite)
+library(data.table)
+library (hablar)
+library(tidyverse)
+
+```
+
+Indicators
+
+Workload
+
+1. Cases per civil police (2016-17)
+
+Trends
+
+1. Women in total police (2011- 2016)
+2. Women officers in total police (2011- 2016)
+3. Constable vacancies (2011- 2016)
+4. Officer vacancies (2011- 2016)
+5. Expenditure on police (%, 2015-16)
+
+Infrastructure
+
+1. Population per police police station station (rural) 
+2. Population per police police station station (urban)
+3. Av. area covered per police police station (rural) 
+4. Av. area covered per police police station (urban) 
+
+Human Resources
+
+1. Constable vacancy
+2. Officers vacancy
+3. Officer to constable ratio/ ratio of constables to officers
+4. No. of police per lakh population 
+5. Police to population ratio
+
+Diversity
+
+1. Total % of women in police
+2. Total % of women officers (insert % of women constables)
+3. SC officers, gap between actual and reserved (% pts, 2016-17)
+4. ST officers, gap between actual and reserved (% pts, 2016-17)
+5. OBC officers, gap between actual and reserved (% pts, 2016-17)
+
+Budgets
+
+1. Modernisation fund used
+2. Spend on police per person
+3. Budget Comparison
+
+```{r}
+
+```
+
+*Theme* : **Budget**
+1 *Indicator* : Modernisation fund used (%, 2016-17) 
+*Short name* :  Modernisation fund used (%, 2016-17) 
+
+```{r}
+
+police_mod = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Police Modernization.xlsx")
+police_mod$`Modernization_fund_utilized %` <- as.numeric(police_mod$`Modernization_fund_utilized %`)
+IN1 <- police_mod %>% 
+  select ("States", "Year", "Modernization_fund_utilized %") %>% 
+  mutate("Modernization_fund_utilized %" = (`Modernization_fund_utilized %`*100))
+
+```
+
+2 *Indicator* : Spend on police per person (Rs, 2015-16)
+*Short name* :  Spend on police per person (Rs, 2015-16)
+
+```{r}
+
+Police_exp = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/CAG Police expenditure.xlsx")
+
+population_2011 = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/total_pop.xlsx")
+
+police_combined <- left_join(Police_exp,population_2011,by = c("States", "Year"))
+police_combined$Police_expenditure_lakhs <- as.numeric(police_combined$Police_expenditure_lakhs)
+police_exp_per_pop <- police_combined %>% 
+  mutate("police_exp_per_capita" = (Police_expenditure_lakhs*100000/`Population (PCA)`))
+
+IN2<- police_exp_per_pop %>% 
+  select("States", "Year", "police_exp_per_capita") 
+
+```
+
+3 *Indicator* : Budget comparison
+*Short name* :  Budget comparison
+
+```{r}
+
+state_expend <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/State Expenditure.xlsx")
+
+state_trend <- state_expend %>%
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  #filter(!is.na(`State expenditure (Rs lakhs)`), !is.infinite(`State expenditure (Rs lakhs)`), `State expenditure (Rs lakhs)` !=0 ) %>% 
+  mutate("Y-o-Y:state_exp" = ((`State expenditure (Rs lakhs)` - lag(`State expenditure (Rs lakhs)`))/lag(`State expenditure (Rs lakhs)`)*100)) %>% 
+  mutate("average:state_exp" = (mean(`Y-o-Y:state_exp`, na.rm = TRUE)))
+
+pillar_trend <- Police_exp %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  #filter(!is.na(Police_expenditure_lakhs), !is.infinite(`Police_expenditure_lakhs`), Police_expenditure_lakhs!=0) %>% 
+  mutate("Y-o-Y:police_exp" = ((`Police_expenditure_lakhs` - lag(`Police_expenditure_lakhs`))/lag(`Police_expenditure_lakhs`)*100)) %>%   mutate("average:police_exp" = (mean(`Y-o-Y:police_exp`, na.rm = TRUE)))
+
+exp_state_police <- left_join(state_trend, pillar_trend, by = c("States", "Year"))
+exp_state_police <- exp_state_police %>% 
+  mutate(budget_comparison = `average:police_exp` - `average:state_exp`)
+
+#police_exp_state_exp <- left_join(state_expend, Police_exp, by = c("States", "Year"))
+#police_exp_state_exp <- police_exp_state_exp %>% 
+#  rowwise() %>% 
+#  mutate("police_exp_state_exp" = (`Police_expenditure_lakhs`/`State expenditure (Rs lakhs)`)*100)
+
+#sheets <- list("Police expenditure" = police_exp_state_exp ,"Judiciary Expenditure" = jud_exp_state_exp, "Prison expenditure" = prison_exp_state_exp)
+#write_xlsx(sheets, "/Users/shreyaagarwal/Desktop/bud_c.xlsx")
+
+   
+IN3 <- exp_state_police %>% 
+  select("States", "Year", "budget_comparison")
+
+```
+
+*Theme* : **Diversity**
+
+1 *Indicator* : Total % of women in police (2016-17)
+*Short name* :  Total % of women in police (2016-17)
+
+```{r}
+
+women_personnel <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Women in Police .xlsx")
+total_police <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Total Police.xlsx")
+
+women_police <- left_join(women_personnel,total_police, by = c("States", "Year"))
+women_police$`Actual total police` <- as.numeric(women_police$`Actual total police`)
+
+women_police<- women_police %>% 
+  select("States", "Year", "total_women_police", "Actual total police", "% of Reservation of Women") %>% 
+  rowwise() %>% 
+  mutate("Share of women police(%)" = (total_women_police/`Actual total police`*100)) 
+
+IN4 <- women_police %>% 
+  select("States", "Year", "Share of women police(%)")
+
+
+```
+
+2 *Indicator* : Total % of women officers
+*Short name* :  Total % of women officers (2016-17)
+
+```{r}
+
+police_officers_half1 <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Total police officers.xlsx")
+police_officers_half <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Total police officers.xlsx", sheet = "Sheet1")
+
+police_officers_total <- left_join(police_officers_half1, police_officers_half, by = c("States", "Year"))
+
+
+police_officers_total[,3:24] <- sapply(police_officers_total[,3:24],as.numeric)
+sapply(police_officers_total, class)
+
+
+police_officers_total <- police_officers_total %>% 
+  rowwise() %>% 
+  mutate("Total officers: sanctioned" = sum(`DGP/Spl.DGP: sanctioned`, `Addl.DGP: sanctioned`, `IGP: sanctioned`, `DIG: sanctioned`, `AIGP/SSP/SP/COMN: sanctioned`,
+                                            `Addl.SP/Dy. COMN: sanctioned`, `ASP/DY.SP: sanctioned`, `Inspector: Sanctioned`, `SI: Sanctioned`, `ASI: Sanctioned`, na.rm = TRUE)) %>% 
+           mutate("Total officers: actual" = sum(`Inspector: Actual`, `SI: Actual`, `ASI: Actual`, `DGP/Spl.DGP: actual`, `Addl.DGP: actual` , `IGP: actual` , `DIG: Actual`, `AIGP/SSP/SP/COMN: actual`,
+                                                 `Addl.SP/Dy. COMN: actual`, `ASP/DY.SP: actual`, na.rm = TRUE) )
+
+police_officers_all <- left_join(police_officers_total,women_personnel,  by = c("States", "Year")) 
+police_officers_all[,3:39] <- sapply(police_officers_all[,3:39],as.numeric)
+
+women_officers <- police_officers_all %>%
+  rowwise() %>% 
+  mutate("women_officers" = sum(`women_police:INSP`,`women_police: A.S.I.`, `women_police:S.I`, `women_police: ASP/Dy.SP/Asst.COM`, `Women_police: DIG`, `Women_police: IGP`, `Women_police:DGP/SplDG/ADGP`, `Women_police:AIGP/SS/SP/COM`, `Women_police:ADLSP/Dy.COM`, `Women_police:Additional DG`,na.rm = TRUE)) %>% 
+  mutate("women_officers_share" = (women_officers/`Total officers: actual`*100))
+
+IN5 <- women_officers %>% 
+  select("States", "Year", "women_officers_share")
+
+
+```
+
+3 *Indicator* : SC officers, actual to reserved ratio (%, 2016-17)
+*Short name* :  SC officers, actual to reserved ratio (%, 2016-17)
+
+*******No SC population in the following states, hence no reservation***** 
+
+1. Nagaland
+2. Arunachal Pradesh
+3. Lakshadweep
+4. Andaman and Nicobar Islands
+
+```{r}
+
+SC <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/SC-ST-OBC in Police .xlsx", sheet = "SC")
+SC[,3:12] <- sapply(SC[,3:12],as.numeric)
+
+SC_officer <- SC %>% 
+  rowwise() %>% 
+  mutate("SC_officers" = sum(SC_INSP, SC_SI, SC_ASI, `SC: Dy.S.P`, na.rm = TRUE))
+
+SCO_total_off <- left_join(SC_officer, police_officers_total, by = c("States", "Year"))
+SCO_total_off[,3:21] <- sapply(SCO_total_off[,3:21],as.numeric)
+
+SCO_total_off1 <- SCO_total_off %>% 
+  mutate("reserved_SC_officers" = sum(`Inspector: Sanctioned` , `SI: Sanctioned` , `ASI: Sanctioned`,`ASP/DY.SP: sanctioned`, na.rm = TRUE)*(`%SC_reservation`)) %>% 
+  mutate("SCofficers:actual_to_reserved" = (SC_officers/(reserved_SC_officers))*100) 
+  
+IN6 <- SCO_total_off1 %>% 
+  select("States", "Year", "SCofficers:actual_to_reserved", "%SC_reservation") %>% 
+  mutate("%SC_reservation" = `%SC_reservation`*100)
+
+```
+
+4 *Indicator* : ST officers, actual to reserved ratio (%, 2016-17)
+*Short name* :  ST officers, actual to reserved ratio (%, 2016-17)
+
+*******No ST population in the following states, hence no reservation***** 
+
+1. Puducherry
+2. Chandigarh
+
+```{r}
+
+ST <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/SC-ST-OBC in Police .xlsx")
+ST[,3:12] <- sapply(ST[,3:12],as.numeric)
+
+ST_officer <- ST %>% 
+  rowwise() %>% 
+  mutate("ST_officers" = sum(ST_INSP, ST_SI, ST_ASI, `ST: Dy.S.P`,na.rm = TRUE))
+
+STO_total_off <- left_join(ST_officer, police_officers_total, by = c("States", "Year"))
+STO_total_off[,3:35] <-sapply(STO_total_off[,3:35],as.numeric)
+
+STO_total_off<- STO_total_off %>% 
+  mutate("reserved_ST_officers" = sum(`Inspector: Sanctioned` , `SI: Sanctioned` , `ASI: Sanctioned`,`ASP/DY.SP: sanctioned`, na.rm = TRUE)*(`%ST_reservation`)) %>% 
+  mutate("STofficers:actual_to_reserved" = ((ST_officers/(reserved_ST_officers))*100)) 
+ 
+IN7 <- STO_total_off %>% 
+  select("States", "Year", "STofficers:actual_to_reserved", "%ST_reservation" ) %>% 
+  mutate("%ST_reservation" = `%ST_reservation`*100)
+
+```
+
+5 *Indicator* : OBC officers, actual to reserved ratio (%, 2016-17)
+*Short name* :  OBC officers, actual to reserved ratio (%, 2016-17)
+
+*******No OBC population in the following states, hence no reservation***** 
+
+a. Arunachal Pradesh
+b. Mizoram
+c. Lakshadweep 
+
+```{r}
+
+OBC <- read_excel ("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/SC-ST-OBC in Police .xlsx", sheet = "OBC")
+OBC[,3:12] <- sapply(OBC[,3:12],as.numeric)
+
+OBC_officer <- OBC %>% 
+  rowwise() %>% 
+  mutate("OBC_officers" = sum(OBC_INSP, OBC_SI, OBC_ASI, `OBC: Dy.S.P`, na.rm = TRUE))
+
+OBC_total_off <- left_join(OBC_officer, police_officers_total, by = c("States", "Year"))
+OBC_total_off[,3:35] <- sapply(OBC_total_off[,3:35],as.numeric)
+
+OBC_total_off<- OBC_total_off %>% 
+   mutate("reserved_OBC_officers" = sum(`Inspector: Sanctioned` , `SI: Sanctioned` , `ASI: Sanctioned`,`ASP/DY.SP: sanctioned`, na.rm = TRUE)*(`%OBC_reservation`)) %>% 
+  mutate("OBCofficers:actual_to_reserved" = ((OBC_officers/(reserved_OBC_officers))*100)) 
+ 
+
+IN8 <- OBC_total_off %>% 
+  select("States", "Year", "OBCofficers:actual_to_reserved", "%OBC_reservation") %>% 
+  mutate("%OBC_reservation" = `%OBC_reservation`*100)
+
+```
+
+*Theme* : **Workload**
+
+
+1 *Indicator* : Population per civil police (numbers, 2016-17)
+*Short name* :  Police to population ratio (2016-17)
+
+```{r}
+
+civil_police1 <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Police Rank wise.xlsx", sheet = "Sheet1")
+
+pop_per_civil_police <- left_join(civil_police1, population_2011,  by = c("States", "Year"))
+
+IN9a <- pop_per_civil_police %>% 
+  mutate("pop_per_CP" = `Population (PCA)`/`Civil police(actual)`)
+
+IN9 <- IN9a %>% 
+  select("States", "Year", "pop_per_CP")
+
+```
+
+*Theme* : **Human Resources**
+
+1 *Indicator* : Constable vacancy (2016-17)
+*Short name* :  Constable vacancy (2016-17)
+
+Notes*****
+
+1. Uttar Pradesh - highest vacancy, 59,292 amongst head constables in 2016-17.
+```{r}
+
+lower_ranks = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Police Rank wise.xlsx", sheet = "Main Data")
+lower_ranks$`H.CONSTABLE (sanctioned)` <- as.numeric(lower_ranks$`H.CONSTABLE (sanctioned)`)
+lower_ranks$`CONSTABLE (Actual)` <- as.numeric(lower_ranks$`CONSTABLE (Actual)`)
+lower_ranks$`H.CONSTABLE (Actual)` <- as.numeric(lower_ranks$`H.CONSTABLE (Actual)`)
+lower_ranks$`CONSTABLE (sanctioned)` <- as.numeric(lower_ranks$`CONSTABLE (sanctioned)`)
+
+constabul <- lower_ranks %>% 
+  select("States", "Year", "H.CONSTABLE (sanctioned)", "H.CONSTABLE (Actual)", "CONSTABLE (sanctioned)", "CONSTABLE (Actual)") %>% 
+  rowwise() %>% 
+  mutate(constabulary_act = sum(`H.CONSTABLE (Actual)`, `CONSTABLE (Actual)`, na.rm = TRUE)) %>% 
+  mutate(constabulary_sanc = sum(`H.CONSTABLE (sanctioned)`, `CONSTABLE (sanctioned)`, na.rm = TRUE)) %>% 
+  mutate("const_vacancy" = (100-(constabulary_act/constabulary_sanc*100)))
+
+IN10 <- constabul %>% 
+  select("States", "Year", "const_vacancy")
+
+
+```
+
+2 *Indicator* : Officers vacancy (2016-17)
+*Short name* :  Officers vacancy (2016-17)
+
+```{r}
+
+lower_ranks[,3:41] <- sapply (lower_ranks[,3:41], as.numeric)
+
+office <- lower_ranks %>% 
+  rowwise() %>% 
+  mutate("office_act" = sum(`Inspector (Actual)`,`SI (actual)` , `ASI (Actual)`, `DGP/Spl.DGP (Actual)`, `Addl.DGP (Actual)`, `IGP (actual`, `DIG (Actual)`, `AIGP/SSP/SP/COMN (actual)`, `Addl.SP/Dy. COMN (actual)` ,`ASP/DY.SP (Actual)` , na.rm = TRUE )) %>% 
+  mutate("office_sanc" = sum(`Inspector (sanctioned)` , `SI (sanctioned)` , `ASI (sanctioned)`, `DGP/Spl.DGP (Sanctioned)`, `Addl.DGP (Sanctioned)`, `IGP (Sanctioned)`,`DIG (Sanctioned)`, `AIGP/SSP/SP/COMN (sanctioned)`, `Addl.SP/Dy. COMN (sanctioned)`, `ASP/DY.SP (sanctioned)`, na.rm=TRUE)) %>% 
+  mutate('officer_vacancy' = (100-(office_act/office_sanc*100)))
+
+IN11 <- office %>% 
+  select("States", "Year", "officer_vacancy")
+
+```
+
+3 *Indicator* : Civil police officers as percentage of civil police (% 2016-17)
+*Short name* :  Share of civil police officers in civil police (2016-17)  
+
+```{r}
+
+cp_officer <- office %>% 
+  mutate("civil police officer share" = (office_act/ `TOTAL (Actual)`*100))
+
+IN12 <- cp_officer %>% 
+  select("States", "Year", "civil police officer share")
+
+```
+
+*Theme* : **Infrastructure**
+
+1 *Indicator* : Rural population per rural police station (number, 2016-17)
+*Short name* :  Population per police police station station (rural) (2016-17) 
+
+```{r}
+
+library(readr)
+library(dplyr)
+
+#filenames <- list.files(path="/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Rural and urban/",pattern="*.CSV")
+
+#fullpath=file.path("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Rural and urban",filenames)
+
+#dataset <- do.call("rbind",lapply(fullpath,FUN=function(files){ read.csv(files)}))
+
+#write_csv(dataset, "/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/rural_urban.csv")
+
+#f_dataset <- read_csv("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/rural_urban.csv")
+
+#total_pop <- f_dataset %>% 
+#  select("Name", "TRU", "Level", "Total.Population.Person") %>% 
+#  filter(Level == "STATE" &TRU == "Total")
+
+#write_xlsx(total_pop, "/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/total_pop.xlsx")
+
+#rural <- f_dataset %>% 
+#  select("Name", "TRU", "Level", "Area", "Total.Population.Person") %>% 
+#  filter(Level == "STATE" & TRU == "Rural") %>% 
+#  mutate(Year = "2016")
+
+#write_csv(rural, "/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/rural.csv")
+rural_p <- read_csv("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/rural.csv")
+
+rural_ps <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Actual and sanctioned police stations.xlsx", sheet = "Sheet2")
+
+police_rural <- left_join(rural_ps,rural_p, by = c("States", "Year") ) 
+police_rural$`Actual Rural Police Stations` <- as.numeric(police_rural$`Actual Rural Police Stations`)
+
+rpop_per_rural_ps <- police_rural %>% 
+  select("States", "Year", "Actual Rural Police Stations", "Total.Population.Person") %>% 
+  mutate("rpop_per_rural_ps" =(`Total.Population.Person`/`Actual Rural Police Stations`))
+
+IN13 <- rpop_per_rural_ps %>% 
+  select ("States", "Year", "rpop_per_rural_ps") 
+
+```
+
+2 *Indicator* : Urban population per urban police station (number, 2016-17)
+*Short name* :  Population per police police station station (urban) (2016-17)
+
+```{r}
+
+#urban <- f_dataset %>% 
+#  select("Name", "TRU", "Level", "Area", "Total.Population.Person") %>% 
+#  filter(Level == "STATE" & TRU == "Urban") %>% 
+#  mutate(Year = "2016")
+
+#write_csv(urban, "/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/urban.csv")
+urban_p <- read_csv("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/urban.csv")
+
+urban_ps <- read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/Actual and sanctioned police stations.xlsx", sheet = "Sheet2")
+
+urban_ps$Year <- as.numeric(rural_ps$Year)
+
+police_urban <- left_join(urban_ps,urban_p, by = c("States", "Year") ) 
+police_urban$`Actual Urban Police Stations` <- as.numeric(police_urban$`Actual Urban Police Stations`)
+
+upop_per_urban_ps <- police_urban %>% 
+  select("States", "Year", "Actual Urban Police Stations", "Total.Population.Person") %>% 
+  mutate("upop_per_urban_ps" =(`Total.Population.Person`/`Actual Urban Police Stations`))
+
+IN14 <- upop_per_urban_ps %>% 
+  select ("States", "Year", "upop_per_urban_ps")
+
+
+
+```
+
+3 *Indicator* : Rural area per rural police station (number, 2016-17)
+*Short name* :  Av. area covered per police police station (rural) (2016-17)
+
+```{r}
+
+rural_ps <- left_join(rural_ps, rural_p, by = c("States", "Year"))
+rural_ps$`Actual Rural Police Stations` <- as.numeric(rural_ps$`Actual Rural Police Stations`)
+
+rural_area<- rural_ps %>% 
+  select("States","Year", "Area(sqkm)", "Actual Rural Police Stations") %>% 
+  mutate("rural_area_per_rural_ps" = (`Area(sqkm)`/`Actual Rural Police Stations`))
+
+IN15 <- rural_area %>% 
+  select("States", "Year", "rural_area_per_rural_ps")
+
+```
+
+4 *Indicator* : Urban area per urban police station (number, 2016-17)
+*Short name* :  Av. area covered per police police station (urban) (2016-17)
+ 
+```{r}
+
+urban_ps$`Actual Urban Police Stations` <- as.numeric(urban_ps$`Actual Urban Police Stations`)
+urban_ps$Urban_SqKm <- as.numeric(urban_ps$Urban_SqKm)
+
+urban_ps <- left_join(urban_ps, urban_p, by = c("States", "Year"))
+
+urban_area <- urban_ps %>% 
+  select("States", "Year", "Area", "Actual Urban Police Stations") %>% 
+  mutate("urban_area_per_urban_ps" = (Area/`Actual Urban Police Stations`))
+
+IN16 <- urban_area %>% 
+  select("States", "Year", "urban_area_per_urban_ps")
+
+
+```
+
+*Theme* : **Trends**
+
+1 *Indicator* : Trend of share of women police in total police (average y-o-y change for 5 years in % points, 2016-17)
+*Short name* :  Women in total police (2011- 2016)
+
+```{r}
+
+IN17a <- IN4 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`Share of women police(%)`), !is.infinite(`Share of women police(%)`)) %>% 
+  mutate("Y-o-Y:Share of women police(%)" = ((`Share of women police(%)` - lag(`Share of women police(%)`)))) %>% 
+  mutate("average:Share of women police(%)" = mean(`Y-o-Y:Share of women police(%)`, na.rm = TRUE))
+
+IN17 <- IN17a %>% 
+  select("States", "Year", "average:Share of women police(%)")
+
+
+```
+
+2 *Indicator* : Trend of share of women officers in total police (average y-o-y change for 5 years in % points, 2016-17)
+*Short name* :  Women officers in total police (2011- 2016)
+
+```{r}
+
+IN18a <- IN5 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`women_officers_share`), !is.infinite(`women_officers_share`)) %>% 
+  mutate("Y-o-Y:women_officers_share" = ((`women_officers_share` - lag(`women_officers_share`)))) %>% 
+  mutate("average:women_officers_share" = mean(`Y-o-Y:women_officers_share`, na.rm = TRUE))
+
+IN18 <- IN18a %>% 
+  select("States", "Year", "average:women_officers_share")
+
+```
+
+
+3 *Indicator* : Trend of constabulary vacancies (average y-o-y change for 5 years in % points, 2016-17)
+*Short name* :  Constable vacancies (2011- 2016)
+ 
+```{r}
+
+IN19a <- IN10 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`const_vacancy`), !is.infinite(`const_vacancy`)) %>% 
+  mutate("Y-o-Y:const_vacancy" = ((`const_vacancy` - lag(`const_vacancy`)))) %>% 
+  mutate("average:const_vacancy" = mean(`Y-o-Y:const_vacancy`, na.rm = TRUE))
+
+IN19 <- IN19a %>% 
+  select("States", "Year", "average:const_vacancy")
+  
+
+
+```
+
+4 *Indicator* : Trend of officer vacancies (average y-o-y change for 5 years in % points, 2016-17)
+*Short name* :  Officer vacancies (2011- 2016)
+ 
+```{r}
+
+IN20a <- IN11 %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2010) %>% 
+  #filter(!is.na(`officer_vacancy`), !is.infinite(`officer_vacancy`)) %>% 
+  mutate("Y-o-Y:officer_vacancy" = ((`officer_vacancy` - lag(`officer_vacancy`)))) %>% 
+  mutate("average:officer_vacancy" = mean(`Y-o-Y:officer_vacancy`, na.rm = TRUE))
+
+IN20<- IN20a %>% 
+  select("States", "Year", "average:officer_vacancy")
+
+```
+
+5 *Indicator* : Trend in police expenditure (%, 2015-16)
+*Short name* :  Expenditure on police (%, 2015-16)
+ 
+```{r}
+
+Police_exp = read_excel("/Users/shreyaagarwal/Documents/Data Projects/Tata Trusts/Main Data/Police/Police Data/CAG Police expenditure.xlsx")
+Police_exp$Police_expenditure_lakhs <- as.numeric(Police_exp$Police_expenditure_lakhs)
+
+IN21a <- Police_exp %>% 
+  group_by(States) %>% 
+  arrange(Year) %>% 
+  filter(Year>2009) %>% 
+  filter(!is.na(`Police_expenditure_lakhs`), !is.infinite(`Police_expenditure_lakhs`), Police_expenditure_lakhs!=0 ) %>% 
+  mutate("Y-o-Y:Police_expenditure_lakhs" = ((`Police_expenditure_lakhs` - lag(`Police_expenditure_lakhs`))/lag(`Police_expenditure_lakhs`)*100)) %>% 
+  mutate("average:Police_expenditure_lakhs" = mean(`Y-o-Y:Police_expenditure_lakhs`, na.rm = TRUE))
+
+IN21 <- IN21a %>% 
+  select("States", "Year", "average:Police_expenditure_lakhs")
+
+```
+
+Combine indicators
+
+```{r}
+
+police <- left_join(IN1, IN2, by = c("States", "Year"))
+police <- left_join(police, IN3, by = c("States", "Year"))
+police <- left_join(police, IN4, by = c("States", "Year"))
+police <- left_join(police, IN5, by = c("States", "Year"))
+police <- left_join(police, IN6, by = c("States", "Year"))
+police <- left_join(police, IN7, by = c("States", "Year"))
+police <- left_join(police, IN8, by = c("States", "Year"))
+police <- left_join(police, IN9, by = c("States", "Year"))
+police <- left_join(police, IN10, by = c("States", "Year"))
+police <- left_join(police, IN11, by = c("States", "Year"))
+police <- left_join(police, IN12, by = c("States", "Year"))
+police <- left_join(police, IN13, by = c("States", "Year"))
+police <- left_join(police, IN14, by = c("States", "Year"))
+police <- left_join(police, IN15, by = c("States", "Year"))
+police <- left_join(police, IN16, by = c("States", "Year"))
+police <- left_join(police, IN17, by = c("States", "Year"))
+police <- left_join(police, IN18, by = c("States", "Year"))
+police <- left_join(police, IN19, by = c("States", "Year"))
+police <- left_join(police, IN20, by = c("States", "Year"))
+#police <- left_join(police, IN21, by = c("States", "Year"))
+
+#write_xlsx(police, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Police/Police_derived_all_years.xlsx")
+
+```
+
+Set latest data
+
+```{r}
+
+police_2016 <- police %>% 
+  filter(Year==2016)
+
+police_2016 <- police_2016[, !names(police_2016) %in% c("police_exp_per_capita", "average:Police_expenditure_lakhs", "budget_comparison", "avg")] 
+
+police_2015 <- police %>% 
+  select("States", "Year", "police_exp_per_capita", "budget_comparison") %>% 
+  filter(Year==2015)
+
+police_latest <- left_join(police_2016, police_2015, by = c("States"))
+police_latest <- police_latest[, !names(police_latest)%in% c("Year.x", "Year.y")]
+police_latest <- police_latest[!police_latest$States == "All India", ]
+
+names(police_latest)
+
+```
+CHANGE NANs and INFs to NAs
+
+```{r}
+
+police_latest <- police_latest %>% rationalize()
+
+```
+
+
+Renaming Indicators
+
+```{r}
+
+setnames(police_latest,"Modernization_fund_utilized %", "Modernisation fund used (%, 2016-17" )
+setnames(police_latest,"Share of women police(%)", "Total % of women in police (2016-17)" )
+setnames(police_latest,"women_officers_share", "Total % of women officers (2016-17)" )
+setnames(police_latest,"SCofficers:actual_to_reserved", "SC officers, actual to reserved ratio (%, 2016-17)" )
+setnames(police_latest,"STofficers:actual_to_reserved", "ST officers, actual to reserved ratio (%, 2016-17)" )
+setnames(police_latest,"OBCofficers:actual_to_reserved", "OBC officers, actual to reserved ratio (%, 2016-17)" )
+setnames(police_latest,"const_vacancy", "Constable vacancy (%, 2016-17)" )
+setnames(police_latest,"officer_vacancy", "Officers vacancy (%, 2016-17)" )
+setnames(police_latest,"civil police officer share", "Total % of officers in civil police (2016-17)")
+setnames(police_latest,"rpop_per_rural_ps", "Population per police police station (rural) (number, 2016-17)" )
+setnames(police_latest,"upop_per_urban_ps", "Population per police police station (urban) (number, 2016-17)" )
+setnames(police_latest,"rural_area_per_rural_ps", "Av. area covered per police station (rural) (Sq Kms, 2016-17)" )
+setnames(police_latest,"urban_area_per_urban_ps", "Av. area covered per police station (urban) (Sq Kms, 2016-17)" )
+setnames(police_latest,"average:Share of women police(%)", "Women in total police (2011- 2016)" )
+setnames(police_latest,"average:women_officers_share", "Women officers in total police (2011- 2016)" )
+setnames(police_latest,"average:const_vacancy", "Constable vacancies (2011- 2016)" )
+setnames(police_latest,"average:officer_vacancy", "Officer vacancies (2011- 2016)" )
+setnames(police_latest,"pop_per_CP", "Population per civil police (numbers, 2016-17)" )
+setnames(police_latest,"police_exp_per_capita", "Spend on police per person (Rs, 2016-17)" )
+#setnames(police_latest,"average:Police_expenditure_lakhs", "Expenditure on police (%, 2010-15)" )
+setnames(police_latest,"budget_comparison", "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" )
+
+```
+
+
+Replacing certain values with NAs
+
+```{r}
+
+# police_latest$`SC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "A&N Islands")] <- "No SC population"
+# police_latest$`SC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "Lakshadweep")] <- "No SC population"
+# police_latest$`SC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "Nagaland")] <- "No SC population"
+# police_latest$`SC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "Arunachal Pradesh")] <- "No SC population"
+# 
+
+#ST officers
+
+# police_latest$`ST officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "Chandigarh")] <- "No ST population"
+# police_latest$`ST officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States == "Puducherry")] <- "No ST population"
+
+#OBC officers
+
+# police_latest$`OBC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States=="Nagaland")] <- "No OBC population"
+# police_latest$`OBC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States=="Arunchal Pradesh")] <- "No OBC population"
+# police_latest$`OBC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States=="Mizoram")] <- "No OBC population"
+# police_latest$`OBC officers, actual to reserved ratio (%, 2016-17)`[which(police_latest$States=="Tripura")] <- "No OBC population"
+
+#Rural population per rural police station
+
+# police_latest$`Population per police police station (rural) (number, 2016-17)`[which(police_latest$States=="Delhi")] <- "No rural police stations"
+# police_latest$`Population per police police station (rural) (number, 2016-17)`[which(police_latest$States=="Daman & Diu")] <- "No rural police stations"
+# police_latest$`Population per police police station (rural) (number, 2016-17)`[which(police_latest$States=="Chandigarh")] <- "No rural police stations"
+
+#Urban population per urban police station
+
+# police_latest$`Population per police police station (urban) (number, 2016-17)`[which(police_latest$States=="Lakshadweep")] <- "No urban police station"
+# police_latest$`Population per police police station (urban) (number, 2016-17)`[which(police_latest$States=="Telangana")] <- "No urban police station"
+# police_latest$`Population per police police station (urban) (number, 2016-17)`[which(police_latest$States=="Telangana")] <- "No urban police station"
+
+#Rural area per rural police station 
+
+# police_latest$`Av. area covered per police station (rural) (Sq Kms, 2016-17)`[which(police_latest$States=="Delhi")] <- "No rural police stations"
+# police_latest$`Av. area covered per police station (rural) (Sq Kms, 2016-17)`[which(police_latest$States=="Daman & Diu")] <- "No rural police stations"
+# police_latest$`Av. area covered per police station (rural) (Sq Kms, 2016-17)`[which(police_latest$States=="Chandigarh")] <- "No rural police stations"
+# police_latest$`Av. area covered per police station (rural) (Sq Kms, 2016-17)`[which(police_latest$States=="Meghalaya")] <- "No rural area"
+
+
+
+#Urban area per urban police station 
+
+# police_latest$`Av. area covered per police station (urban) (Sq Kms, 2016-17)`[which(police_latest$States=="Nagaland")] <- "No urban areas"
+# police_latest$`Av. area covered per police station (urban) (Sq Kms, 2016-17)`[which(police_latest$States=="Lakshadweep")] <- "No urban police stations"
+# police_latest$`Av. area covered per police station (urban) (Sq Kms, 2016-17)`[which(police_latest$States=="Telangana")] <- "No urban police stations"
+# police_latest$`Av. area covered per police station (urban) (Sq Kms, 2016-17)`[which(police_latest$States=="Arunachal Pradesh")] <- "No urban areas"
+
+
+# Replacing Andhra Pradesh and Telangana with NAs
+
+#Andhra Pradesh
+
+police_latest$`Women in total police (2011- 2016)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+#police_latest$`Expenditure on police (%, 2010-15)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+police_latest$`Officer vacancies (2011- 2016)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+police_latest$`Women officers in total police (2011- 2016)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+police_latest$`Constable vacancies (2011- 2016)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+police_latest$`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)`[which(police_latest$States=="Andhra Pradesh")] <- NA
+#Telangana
+
+police_latest$`Women in total police (2011- 2016)`[which(police_latest$States=="Telangana")] <- NA
+#police_latest$`Expenditure on police (%, 2010-15)`[which(police_latest$States=="Telangana")] <- NA
+police_latest$`Officer vacancies (2011- 2016)`[which(police_latest$States=="Telangana")] <- NA
+police_latest$`Women officers in total police (2011- 2016)`[which(police_latest$States=="Telangana")] <- NA
+police_latest$`Constable vacancies (2011- 2016)`[which(police_latest$States=="Telangana")] <- NA
+police_latest$`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)`[which(police_latest$States=="Telangana")] <- NA
+
+
+```
+
+CLUSTERING
+```{r}
+
+police_latest <- police_latest %>% 
+  mutate("Clusters" = case_when(
+    States %in% c("Lakshadweep", "A&N Islands", "Daman & Diu", "D&N Haveli", "Chandigarh", "Puducherry", "Delhi") ~ "Union Territory",
+    States %in% c("Sikkim", "Mizoram", "Arunachal Pradesh", "Puducherry", "Meghalaya", "Tripura", "Himachal Pradesh", "Goa") ~ "Small States",
+    States %in% c("Uttarakhand", "Telangana", "Haryana", "Chhattisgarh", "Punjab",  "Jharkhand", "Kerala", "Odisha", "Gujarat", "Karnataka", "Rajasthan", "Tamil Nadu", "Madhya Pradesh", "Andhra Pradesh", "West Bengal", "Bihar", "Maharashtra", "Uttar Pradesh") ~ "Large and Mid States",
+    States %in% c("Manipur", "Jammu & Kashmir", "Assam", "Nagaland") ~ "Conflict States"
+  )) 
+
+```
+ 
+ Clustering - grouping
+```{r}
+
+police_latest_CS <- police_latest %>% 
+  filter(Clusters == "Conflict States")
+
+police_latest_UTs <- police_latest %>% 
+  filter(Clusters == "Union Territory")
+
+police_latest_small <- police_latest %>% 
+  filter(Clusters == "Small States")
+
+police_latest_large_mid <- police_latest %>% 
+  filter(Clusters == "Large and Mid States")
+
+```
+ 
+
+EMPTY DATAFRAME
+```{r}
+
+police_score <- police_latest
+police_score[1:36,2:21] <- NA
+police_score[,c("Clusters")] <- list(NULL)
+
+```
+
+Formulas
+
+```{r}
+
+formula_1 <-function(x) {
+  case_when(!is.infinite(x)|!is.na(x)~(((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Higher the better
+
+formula_2 <-function(x) {
+  case_when(!(is.infinite(x)|is.na(x))~(((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1)
+} #Lower the better
+
+formula_3 <-function(x) {
+  case_when(x <= 0 ~ 10,
+            x > 0 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1
+    )    }
+
+formula_6 <- function(x) {
+  case_when(x >= 100 ~ 10,
+            x < 100 ~ (((x - min(x, na.rm = TRUE))*9)/(100 - min(x, na.rm = TRUE))) + 1
+  )    }
+
+formula_7 <- function(x) {
+  case_when(x >= 0 ~ 10,
+            x < 0 ~ (((x - min(x, na.rm = TRUE))*9)/(max(x, na.rm = TRUE) - min(x, na.rm = TRUE))) + 1
+  )    }
+
+formula_8 <- function(x) {
+  case_when(x <= 150 ~ 10,
+            x > 150 ~ (((max(x, na.rm = TRUE) - x)*9)/(max(x, na.rm = TRUE) - 150)) + 1
+  )    }
+
+```
+
+```{r}
+
+names(police_latest)
+
+```
+
+Scoring
+
+```{r}
+
+fm1_cols <- c("Total % of women in police (2016-17)",
+              "Total % of women officers (2016-17)",
+              "Women in total police (2011- 2016)",
+              "Women officers in total police (2011- 2016)", 
+              "Spend on police per person (Rs, 2016-17)",
+              "Total % of officers in civil police (2016-17)")
+
+fm2_cols <- c("Population per police police station (rural) (number, 2016-17)",
+              "Population per police police station (urban) (number, 2016-17)",                                             
+              "Av. area covered per police station (urban) (Sq Kms, 2016-17)",
+              "Constable vacancies (2011- 2016)",
+              "Officer vacancies (2011- 2016)",
+              "Population per civil police (numbers, 2016-17)")
+              
+fm3_cols <- c("Constable vacancy (%, 2016-17)", "Officers vacancy (%, 2016-17)")
+              
+fm6_cols <- c("Modernisation fund used (%, 2016-17", "OBC officers, actual to reserved ratio (%, 2016-17)",
+              "SC officers, actual to reserved ratio (%, 2016-17)", "ST officers, actual to reserved ratio (%, 2016-17)")
+
+fm7_cols <- c("budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)")
+
+fm8_cols <- c("Av. area covered per police station (rural) (Sq Kms, 2016-17)")
+             
+```
+
+Batch convert columns to numeric 
+
+```{r}
+
+police_latest[,3:24] <- sapply(police_latest[,3:24], as.numeric)
+police_latest_small[,3:24] <- sapply(police_latest_small[,3:24], as.numeric)
+police_latest_large_mid[,3:24] <- sapply(police_latest_large_mid[,3:24], as.numeric)
+police_latest_CS[,3:24] <- sapply(police_latest_CS[,3:24], as.numeric)
+police_latest_UTs[,3:24] <- sapply(police_latest_UTs[,3:24], as.numeric)
+
+
+```
+
+SCORING
+
+```{r}
+
+police_score[fm1_cols] <- lapply(police_latest[fm1_cols], formula_1)
+police_score[fm2_cols] <- lapply(police_latest[fm2_cols], formula_2)
+police_score[fm3_cols] <- lapply(police_latest[fm3_cols], formula_3)
+police_score[fm6_cols] <- lapply(police_latest[fm6_cols], formula_6)
+police_score[fm7_cols] <- lapply(police_latest[fm7_cols], formula_7)
+police_score[fm8_cols] <- lapply(police_latest[fm8_cols], formula_8)
+
+```
+
+Cluster Scoring - Small States
+```{r}
+
+police_small_score <- police_latest_small
+police_small_score[1:7,2:21] <- NA
+police_small_score[,c("Clusters")] <- list(NULL)
+police_small_score[fm1_cols] <- lapply(police_latest_small[fm1_cols], formula_1)
+police_small_score[fm2_cols] <- lapply(police_latest_small[fm2_cols], formula_2)
+police_small_score[fm3_cols] <- lapply(police_latest_small[fm3_cols], formula_3)
+police_small_score[fm6_cols] <- lapply(police_latest_small[fm6_cols], formula_6)
+police_small_score[fm7_cols] <- lapply(police_latest_small[fm7_cols], formula_7)
+police_small_score[fm8_cols] <- lapply(police_latest_small[fm8_cols], formula_8)
+
+police_small_score[,c("%SC_reservation", "%ST_reservation", "%OBC_reservation", "Clusters")] <- list(NULL)
+
+```
+
+Scoring - large and mid score
+```{r}
+
+police_large_mid_score <- police_latest_large_mid
+police_large_mid_score[1:18,2:21] <- NA
+police_large_mid_score[,c("Clusters")] <- list(NULL)
+police_large_mid_score[fm1_cols] <- lapply(police_latest_large_mid[fm1_cols], formula_1)
+police_large_mid_score[fm2_cols] <- lapply(police_latest_large_mid[fm2_cols], formula_2)
+police_large_mid_score[fm3_cols] <- lapply(police_latest_large_mid[fm3_cols], formula_3)
+police_large_mid_score[fm6_cols] <- lapply(police_latest_large_mid[fm6_cols], formula_6)
+police_large_mid_score[fm7_cols] <- lapply(police_latest_large_mid[fm7_cols], formula_7)
+police_large_mid_score[fm8_cols] <- lapply(police_latest_large_mid[fm8_cols], formula_8)
+
+police_large_mid_score[,c("%SC_reservation", "%ST_reservation", "%OBC_reservation", "Clusters")] <- list(NULL)
+
+```
+
+Scoring - UTs
+```{r}
+
+police_UT_score <- police_latest_UTs
+police_UT_score[1:7,2:21] <- NA
+police_UT_score[,c("Clusters")] <- list(NULL)
+police_UT_score[fm1_cols] <- lapply(police_latest_UTs[fm1_cols], formula_1)
+police_UT_score[fm2_cols] <- lapply(police_latest_UTs[fm2_cols], formula_2)
+police_UT_score[fm3_cols] <- lapply(police_latest_UTs[fm3_cols], formula_3)
+police_UT_score[fm6_cols] <- lapply(police_latest_UTs[fm6_cols], formula_6)
+police_UT_score[fm7_cols] <- lapply(police_latest_UTs[fm7_cols], formula_7)
+police_UT_score[fm8_cols] <- lapply(police_latest_UTs[fm8_cols], formula_8)
+
+police_UT_score[,c("%SC_reservation", "%ST_reservation", "%OBC_reservation", "Clusters")] <- list(NULL)
+
+```
+
+Scoring - CS
+```{r}
+
+police_CS_score <- police_latest_CS
+police_CS_score[1:4,2:21] <- NA
+police_CS_score[,c("Clusters")] <- list(NULL)
+police_CS_score[fm1_cols] <- lapply(police_latest_CS[fm1_cols], formula_1)
+police_CS_score[fm2_cols] <- lapply(police_latest_CS[fm2_cols], formula_2)
+police_CS_score[fm3_cols] <- lapply(police_latest_CS[fm3_cols], formula_3)
+police_CS_score[fm6_cols] <- lapply(police_latest_CS[fm6_cols], formula_6)
+police_CS_score[fm7_cols] <- lapply(police_latest_CS[fm7_cols], formula_7)
+police_CS_score[fm8_cols] <- lapply(police_latest_CS[fm8_cols], formula_8)
+
+police_UT_score[,c("%SC_reservation", "%ST_reservation", "%OBC_reservation", "Clusters")] <- list(NULL)
+
+```
+
+
+Benchmark row - small states
+
+```{r}
+
+police_small_score <- police_small_score %>% 
+  add_row(States = "Benchmark", 
+         `Modernisation fund used (%, 2016-17` = "100% and above gets 10, values below 100% get scored as higher the better",                                `Total % of women in police (2016-17)` = "Higher the better",                                              
+ `Total % of women officers (2016-17)` = "Higher the better" ,                                           
+ `SC officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better",                 `ST officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better" ,               `OBC officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better" ,              `Population per civil police (numbers, 2016-17)` = "Lower the better",                                     
+   `Constable vacancy (%, 2016-17)` = "0% and lower gets 10, values above 0% get scored as per lower the better rule",                                 `Officers vacancy (%, 2016-17)` = "0% and lower gets 10, values above 0% get scored as per lower the better rule",                               `Total % of officers in civil police (2016-17)` = "Higher the better",                                        
+`Population per police police station (rural) (number, 2016-17)` = "Lower the better" ,                      
+`Population per police police station (urban) (number, 2016-17)` = "Lower the better",                       
+`Av. area covered per police station (rural) (Sq Kms, 2016-17)` = "150 and lower values get 10, values above 150 get scored as per lower the better rule" ,                       
+`Av. area covered per police station (urban) (Sq Kms, 2016-17)` = "Lower the better" ,                       
+`Women in total police (2011- 2016)` = "Higher the better" ,                                                   
+`Women officers in total police (2011- 2016)` = "Higher the better",                                         
+`Constable vacancies (2011- 2016)` = "Lower the better",                                                     
+`Officer vacancies (2011- 2016)` = "Lower the better" ,                                                       
+`Spend on police per person (Rs, 2016-17)` = "Higher the better" ,                                            
+#`Expenditure on police (%, 2010-15)` = "Higher the better" ,                                        
+`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)` = "0 and above gets 10, values below 0 get scored as per higher the better rule")
+
+```
+
+Benchmark row - Large and mid states
+
+```{r}
+
+police_large_mid_score <- police_large_mid_score %>% 
+  add_row(States = "Benchmark", 
+         `Modernisation fund used (%, 2016-17` = "100% and above gets 10, values below 100% get scored as higher the better",                                `Total % of women in police (2016-17)` = "Higher the better",                                              
+ `Total % of women officers (2016-17)` = "Higher the better" ,                                           
+ `SC officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better",                 `ST officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better" ,               `OBC officers, actual to reserved ratio (%, 2016-17)` = "100% and above gets 10, values below 100% get scored as higher the better" ,              `Population per civil police (numbers, 2016-17)` = "Lower the better",                                     
+   `Constable vacancy (%, 2016-17)` = "0% and lower gets 10, values above 0% get scored as per lower the better rule",                                 `Officers vacancy (%, 2016-17)` = "0% and lower gets 10, values above 0% get scored as per lower the better rule",                               `Total % of officers in civil police (2016-17)` = "Higher the better",                                        
+`Population per police police station (rural) (number, 2016-17)` = "Lower the better" ,                      
+`Population per police police station (urban) (number, 2016-17)` = "Lower the better",                       
+`Av. area covered per police station (rural) (Sq Kms, 2016-17)` = "150 and lower values get 10, values above 150 get scored as per lower the better rule" ,                       
+`Av. area covered per police station (urban) (Sq Kms, 2016-17)` = "Lower the better" ,                       
+`Women in total police (2011- 2016)` = "Higher the better" ,                                                   
+`Women officers in total police (2011- 2016)` = "Higher the better",                                         
+`Constable vacancies (2011- 2016)` = "Lower the better",                                                     
+`Officer vacancies (2011- 2016)` = "Lower the better" ,                                                       
+`Spend on police per person (Rs, 2016-17)` = "Higher the better" ,                                            
+#`Expenditure on police (%, 2010-15)` = "Higher the better" ,                                        
+`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)` = "0 and above gets 10, values below 0 get scored as per higher the better rule")
+
+```
+
+Theme row - small states
+
+```{r}
+
+police_small_score <- police_small_score %>% 
+  add_row(States = "Themes", 
+          `Modernisation fund used (%, 2016-17` = "Budgets",
+          `Total % of women in police (2016-17)` = "Diversity",                                              
+ `Total % of women officers (2016-17)` = "Diversity" ,                                           
+ `SC officers, actual to reserved ratio (%, 2016-17)` = "Diversity",
+ `ST officers, actual to reserved ratio (%, 2016-17)` = "Diversity",
+ `OBC officers, actual to reserved ratio (%, 2016-17)` = "Diversity" ,
+ `Population per civil police (numbers, 2016-17)` = "Workload",                                     
+   `Constable vacancy (%, 2016-17)` = "Human Resources",  
+ `Officers vacancy (%, 2016-17)` = "Human Resources",
+ `Total % of officers in civil police (2016-17)` = "Human Resources",                                        
+`Population per police police station (rural) (number, 2016-17)` = "Infrastructure" ,                      
+`Population per police police station (urban) (number, 2016-17)` = "Infrastructure",                       
+`Av. area covered per police station (rural) (Sq Kms, 2016-17)` = "Infrastructure" ,                       
+`Av. area covered per police station (urban) (Sq Kms, 2016-17)` = "Infrastructure" ,                       
+`Women in total police (2011- 2016)` = "Trends" ,                                                   
+`Women officers in total police (2011- 2016)` = "Trends",                                         
+`Constable vacancies (2011- 2016)` = "Trends",                                                     
+`Officer vacancies (2011- 2016)` = "Trends" ,                                                       
+`Spend on police per person (Rs, 2016-17)` = "Budgets" ,                                            
+#`Expenditure on police (%, 2010-15)` = "Trends" ,                                        
+`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)` = "Budgets")
+
+```
+
+Themes row - large and mid states
+
+```{r}
+
+police_large_mid_score <- police_large_mid_score %>% 
+  add_row(States = "Themes", 
+          `Modernisation fund used (%, 2016-17` = "Budgets",
+          `Total % of women in police (2016-17)` = "Diversity",                                              
+ `Total % of women officers (2016-17)` = "Diversity" ,                                           
+ `SC officers, actual to reserved ratio (%, 2016-17)` = "Diversity",
+ `ST officers, actual to reserved ratio (%, 2016-17)` = "Diversity",
+ `OBC officers, actual to reserved ratio (%, 2016-17)` = "Diversity" ,
+ `Population per civil police (numbers, 2016-17)` = "Workload",                                     
+   `Constable vacancy (%, 2016-17)` = "Human Resources",  
+ `Officers vacancy (%, 2016-17)` = "Human Resources",
+ `Total % of officers in civil police (2016-17)` = "Human Resources",                                        
+`Population per police police station (rural) (number, 2016-17)` = "Infrastructure" ,                      
+`Population per police police station (urban) (number, 2016-17)` = "Infrastructure",                       
+`Av. area covered per police station (rural) (Sq Kms, 2016-17)` = "Infrastructure" ,                       
+`Av. area covered per police station (urban) (Sq Kms, 2016-17)` = "Infrastructure" ,                       
+`Women in total police (2011- 2016)` = "Trends" ,                                                   
+`Women officers in total police (2011- 2016)` = "Trends",                                         
+`Constable vacancies (2011- 2016)` = "Trends",                                                     
+`Officer vacancies (2011- 2016)` = "Trends" ,                                                       
+`Spend on police per person (Rs, 2016-17)` = "Budgets" ,                                            
+#`Expenditure on police (%, 2010-15)` = "Trends" ,                                        
+`budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)` = "Budgets")
+```
+
+Source data
+
+```{r}
+
+source_d <- merge(police_mod, Police_exp, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, population_2011, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, state_expend, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, women_personnel, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, total_police, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, police_officers_total, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, SC, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, ST, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, OBC, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, civil_police1, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, lower_ranks, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, rural_p, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, rural_ps, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, urban_p, by = c("States", "Year"), all = TRUE)
+source_d <- merge(source_d, urban_ps, by = c("States", "Year"), all = TRUE)
+
+```
+
+
+```{r}
+
+sheets <- list("source data" = source_d, "derived_data_yearwise" = police,"Derived Data latest" = police_latest, "Small states" = police_small_score, "Large and mid states" = police_large_mid_score)
+
+write_xlsx(sheets, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Data folder/Police/police_sheet.xlsx")
+
+
+
+```
+
+For web design
+```{r}
+
+sheets1 <- list("Derived Data latest" = police_latest, "police_score" = police_score, "Small states" = police_small_score, "Large and mid states" = police_large_mid_score)
+
+write_xlsx(sheets1, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Web design/police_sheet_design.xlsx")
+
+
+```
+
+
+```{r}
+colnames(police_latest)
+```
+
+*For Design*
+
+```{r}
+
+library(reshape2)
+
+police_m <- melt(police_latest, id.vars = c("States", "Clusters"), measure.vars = c(
+"Modernisation fund used (%, 2016-17",                                                  
+"Total % of women in police (2016-17)" ,                                                
+"Total % of women officers (2016-17)"   ,                                               
+"SC officers, actual to reserved ratio (%, 2016-17)" ,                                  
+"ST officers, actual to reserved ratio (%, 2016-17)"  ,                                 
+"OBC officers, actual to reserved ratio (%, 2016-17)"   ,                               
+"Population per civil police (numbers, 2016-17)"         ,                              
+"Constable vacancy (%, 2016-17)"                          ,                             
+"Officers vacancy (%, 2016-17)"                            ,                            
+"Total % of officers in civil police (2016-17)"             ,                           
+"Population per police police station (rural) (number, 2016-17)",                       
+"Population per police police station (urban) (number, 2016-17)" ,                      
+"Av. area covered per police station (rural) (Sq Kms, 2016-17)"   ,                     
+"Av. area covered per police station (urban) (Sq Kms, 2016-17)"    ,                    
+"Women in total police (2011- 2016)"                               ,                    
+"Women officers in total police (2011- 2016)"                       ,                   
+"Constable vacancies (2011- 2016)"                                   ,                  
+"Officer vacancies (2011- 2016)"                                      ,                 
+"Spend on police per person (Rs, 2016-17)"                             ,                
+"budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"))
+
+police_score_lm <- melt(police_large_mid_score, id.vars = c("States"), measure.vars = c(
+  "Modernisation fund used (%, 2016-17",                                                  
+"Total % of women in police (2016-17)" ,                                                
+"Total % of women officers (2016-17)"   ,                                               
+"SC officers, actual to reserved ratio (%, 2016-17)" ,                                  
+"ST officers, actual to reserved ratio (%, 2016-17)"  ,                                 
+"OBC officers, actual to reserved ratio (%, 2016-17)"   ,                               
+"Population per civil police (numbers, 2016-17)"         ,                              
+"Constable vacancy (%, 2016-17)"                          ,                             
+"Officers vacancy (%, 2016-17)"                            ,                            
+"Total % of officers in civil police (2016-17)"             ,                           
+"Population per police police station (rural) (number, 2016-17)",                       
+"Population per police police station (urban) (number, 2016-17)" ,                      
+"Av. area covered per police station (rural) (Sq Kms, 2016-17)"   ,                     
+"Av. area covered per police station (urban) (Sq Kms, 2016-17)"    ,                    
+"Women in total police (2011- 2016)"                               ,                    
+"Women officers in total police (2011- 2016)"                       ,                   
+"Constable vacancies (2011- 2016)"                                   ,                  
+"Officer vacancies (2011- 2016)"                                      ,                 
+"Spend on police per person (Rs, 2016-17)"                             ,                
+"budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"
+))
+
+colnames(police_score_lm)[3] <- "score"
+
+police_m_low <- police_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+police_m_high <- police_m %>% 
+  filter(Clusters =="Large and Mid States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+police_m_mid_large <- police_m %>% 
+  filter(Clusters=="Large and Mid States")
+
+police_m_mid_large <- left_join(police_m_mid_large, police_m_high, by = "variable") 
+police_m_mid_large <- left_join(police_m_mid_large, police_m_low, by = "variable")
+
+
+# FOR LARGE AND MID STATES
+
+police_m_mid_large <- police_m_mid_large %>% 
+  mutate("Themes" = case_when(
+   variable == "Modernisation fund used (%, 2016-17" ~ "Budgets",                                                  
+variable == "Total % of women in police (2016-17)" ~ "Diversity" ,                                                
+variable == "Total % of women officers (2016-17)" ~ "Diversity"  ,                                               
+variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                  
+variable =="ST officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                 
+variable =="OBC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity"  ,                               
+variable =="Population per civil police (numbers, 2016-17)" ~   "Human Resources"    ,                              
+variable =="Constable vacancy (%, 2016-17)"               ~ "Human Resources"          ,                             
+variable =="Officers vacancy (%, 2016-17)"                 ~  "Human Resources"         ,                            
+variable =="Total % of officers in civil police (2016-17)"  ~ "Human Resources"          ,                           
+variable =="Population per police police station (rural) (number, 2016-17)" ~ "Infrastructure"  ,                       
+variable =="Population per police police station (urban) (number, 2016-17)" ~  "Infrastructure",                      
+variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"~  "Infrastructure" ,                     
+variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ "Infrastructure"  ,                    
+variable =="Women in total police (2011- 2016)"                           ~  "Trends"  ,                    
+variable =="Women officers in total police (2011- 2016)"                  ~ "Trends"   ,                   
+variable =="Constable vacancies (2011- 2016)"                             ~ "Trends"     ,                  
+variable =="Officer vacancies (2011- 2016)"                               ~ "Trends"      ,                 
+variable =="Spend on police per person (Rs, 2016-17)"                     ~ "Budgets"       ,                
+variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"~ "Trends")) 
+  
+  
+  police_m_mid_large <- police_m_mid_large %>%  
+  mutate("worst value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Modernisation fund used (%, 2016-17"&police_m_mid_large$States=="Punjab")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Total % of women in police (2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Total % of women officers (2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Population per civil police (numbers, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Constable vacancy (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Officers vacancy (%, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Total % of officers in civil police (2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Women in total police (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Women officers in total police (2011- 2016)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Constable vacancies (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Officer vacancies (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Spend on police per person (Rs, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_mid_large$States=="Punjab")]))
+  
+  
+  police_m_mid_large <- police_m_mid_large %>% 
+  mutate("Best value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Modernisation fund used (%, 2016-17"&police_m_mid_large$States=="Punjab")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Total % of women in police (2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Total % of women officers (2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Population per civil police (numbers, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Constable vacancy (%, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Officers vacancy (%, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Total % of officers in civil police (2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_mid_large$States=="Punjab")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Women in total police (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Women officers in total police (2011- 2016)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Constable vacancies (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_mid_large$lowvalue[which(police_m_mid_large$variable =="Officer vacancies (2011- 2016)"&police_m_mid_large$States=="Punjab")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="Spend on police per person (Rs, 2016-17)"&police_m_mid_large$States=="Punjab")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_mid_large$highvalue[which(police_m_mid_large$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_mid_large$States=="Punjab")]))
+
+police_m_mid_large <- left_join(police_m_mid_large,police_score_lm,by=c("States", "variable"))
+
+police_m_mid_large <- police_m_mid_large %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+  
+    
+```
+
+For Small States
+
+```{r}
+
+police_m_low1 <- police_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+police_m_high1 <- police_m %>% 
+  filter(Clusters =="Small States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+police_m_small <- police_m %>% 
+  filter(Clusters=="Small States")
+
+police_m_small <- left_join(police_m_small, police_m_high1, by = "variable") 
+police_m_small <- left_join(police_m_small, police_m_low1, by = "variable")
+
+police_score_small <- melt(police_small_score, id.vars = c("States"), measure.vars = c(
+"Modernisation fund used (%, 2016-17",                                                  
+"Total % of women in police (2016-17)" ,                                                
+"Total % of women officers (2016-17)"   ,                                               
+"SC officers, actual to reserved ratio (%, 2016-17)" ,                                  
+"ST officers, actual to reserved ratio (%, 2016-17)"  ,                                 
+"OBC officers, actual to reserved ratio (%, 2016-17)"   ,                               
+"Population per civil police (numbers, 2016-17)"         ,                              
+"Constable vacancy (%, 2016-17)"                          ,                             
+"Officers vacancy (%, 2016-17)"                            ,                            
+"Total % of officers in civil police (2016-17)"             ,                           
+"Population per police police station (rural) (number, 2016-17)",                       
+"Population per police police station (urban) (number, 2016-17)" ,                      
+"Av. area covered per police station (rural) (Sq Kms, 2016-17)"   ,                     
+"Av. area covered per police station (urban) (Sq Kms, 2016-17)"    ,                    
+"Women in total police (2011- 2016)"                               ,                    
+"Women officers in total police (2011- 2016)"                       ,                   
+"Constable vacancies (2011- 2016)"                                   ,                  
+"Officer vacancies (2011- 2016)"                                      ,                 
+"Spend on police per person (Rs, 2016-17)"                             ,                
+"budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"))
+
+colnames(police_score_small)[3] <- "score"
+
+police_m_small <- police_m_small %>% 
+   mutate("Themes" = case_when(
+   variable == "Modernisation fund used (%, 2016-17" ~ "Budgets",                                                  
+variable == "Total % of women in police (2016-17)" ~ "Diversity" ,                                                
+variable == "Total % of women officers (2016-17)" ~ "Diversity"  ,                                               
+variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                  
+variable =="ST officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                 
+variable =="OBC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity"  ,                               
+variable =="Population per civil police (numbers, 2016-17)" ~   "Human Resources"    ,                              
+variable =="Constable vacancy (%, 2016-17)"               ~ "Human Resources"          ,                             
+variable =="Officers vacancy (%, 2016-17)"                 ~  "Human Resources"         ,                            
+variable =="Total % of officers in civil police (2016-17)"  ~ "Human Resources"          ,                           
+variable =="Population per police police station (rural) (number, 2016-17)" ~ "Infrastructure"  ,                       
+variable =="Population per police police station (urban) (number, 2016-17)" ~  "Infrastructure",                      
+variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"~  "Infrastructure" ,                     
+variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ "Infrastructure"  ,                    
+variable =="Women in total police (2011- 2016)"                           ~  "Trends"  ,                    
+variable =="Women officers in total police (2011- 2016)"                  ~ "Trends"   ,                   
+variable =="Constable vacancies (2011- 2016)"                             ~ "Trends"     ,                  
+variable =="Officer vacancies (2011- 2016)"                               ~ "Trends"      ,                 
+variable =="Spend on police per person (Rs, 2016-17)"                     ~ "Budgets"       ,                
+variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"~ "Trends"))
+
+police_m_small <- police_m_small %>%   
+     mutate("worst value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_small$lowvalue[which(police_m_small$variable =="Modernisation fund used (%, 2016-17"&police_m_small$States=="Goa")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Total % of women in police (2016-17)"&police_m_small$States=="Goa")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Total % of women officers (2016-17)"&police_m_small$States=="Goa")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Population per civil police (numbers, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Constable vacancy (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Officers vacancy (%, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Total % of officers in civil police (2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Women in total police (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Women officers in total police (2011- 2016)"&police_m_small$States=="Goa")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_small$highvalue[which(police_m_small$variable =="Constable vacancies (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_small$highvalue[which(police_m_small$variable =="Officer vacancies (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Spend on police per person (Rs, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_small$lowvalue[which(police_m_small$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_small$States=="Goa")]))
+  
+  
+  police_m_small <- police_m_small %>% 
+  mutate("Best value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_small$highvalue[which(police_m_small$variable =="Modernisation fund used (%, 2016-17"&police_m_small$States=="Goa")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Total % of women in police (2016-17)"&police_m_small$States=="Goa")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Total % of women officers (2016-17)"&police_m_small$States=="Goa")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Population per civil police (numbers, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Constable vacancy (%, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Officers vacancy (%, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Total % of officers in civil police (2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_small$States=="Goa")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_small$highvalue[which(police_m_small$variable =="Women in total police (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_small$highvalue[which(police_m_small$variable =="Women officers in total police (2011- 2016)"&police_m_small$States=="Goa")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Constable vacancies (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_small$lowvalue[which(police_m_small$variable =="Officer vacancies (2011- 2016)"&police_m_small$States=="Goa")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_small$highvalue[which(police_m_small$variable =="Spend on police per person (Rs, 2016-17)"&police_m_small$States=="Goa")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_small$highvalue[which(police_m_small$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_small$States=="Goa")]))
+    
+
+police_m_small <- left_join(police_m_small,police_score_small,by=c("States", "variable"))
+
+police_m_small <- police_m_small %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+
+For UTs
+```{r}
+
+police_m_low2 <- police_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+police_m_high2 <- police_m %>% 
+  filter(Clusters =="Union Territory") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+police_m_UT <- police_m %>% 
+  filter(Clusters=="Union Territory")
+
+police_m_UT <- left_join(police_m_UT, police_m_high2, by = "variable") 
+police_m_UT <- left_join(police_m_UT, police_m_low2, by = "variable")
+
+police_score_UT <- melt(police_UT_score, id.vars = c("States"), measure.vars = c(
+"Modernisation fund used (%, 2016-17",                                                  
+"Total % of women in police (2016-17)" ,                                                
+"Total % of women officers (2016-17)"   ,                                               
+"SC officers, actual to reserved ratio (%, 2016-17)" ,                                  
+"ST officers, actual to reserved ratio (%, 2016-17)"  ,                                 
+"OBC officers, actual to reserved ratio (%, 2016-17)"   ,                               
+"Population per civil police (numbers, 2016-17)"         ,                              
+"Constable vacancy (%, 2016-17)"                          ,                             
+"Officers vacancy (%, 2016-17)"                            ,                            
+"Total % of officers in civil police (2016-17)"             ,                           
+"Population per police police station (rural) (number, 2016-17)",                       
+"Population per police police station (urban) (number, 2016-17)" ,                      
+"Av. area covered per police station (rural) (Sq Kms, 2016-17)"   ,                     
+"Av. area covered per police station (urban) (Sq Kms, 2016-17)"    ,                    
+"Women in total police (2011- 2016)"                               ,                    
+"Women officers in total police (2011- 2016)"                       ,                   
+"Constable vacancies (2011- 2016)"                                   ,                  
+"Officer vacancies (2011- 2016)"                                      ,                 
+"Spend on police per person (Rs, 2016-17)"                             ,                
+"budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"))
+
+colnames(police_score_UT)[3] <- "score"
+
+
+police_m_UT <- police_m_UT %>% 
+  mutate("Themes" = case_when(
+   variable == "Modernisation fund used (%, 2016-17" ~ "Budgets",                                                  
+variable == "Total % of women in police (2016-17)" ~ "Diversity" ,                                                
+variable == "Total % of women officers (2016-17)" ~ "Diversity"  ,                                               
+variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                  
+variable =="ST officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                 
+variable =="OBC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity"  ,                               
+variable =="Population per civil police (numbers, 2016-17)" ~   "Human Resources"    ,                              
+variable =="Constable vacancy (%, 2016-17)"               ~ "Human Resources"          ,                             
+variable =="Officers vacancy (%, 2016-17)"                 ~  "Human Resources"         ,                            
+variable =="Total % of officers in civil police (2016-17)"  ~ "Human Resources"          ,                           
+variable =="Population per police police station (rural) (number, 2016-17)" ~ "Infrastructure"  ,                       
+variable =="Population per police police station (urban) (number, 2016-17)" ~  "Infrastructure",                      
+variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"~  "Infrastructure" ,                     
+variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ "Infrastructure"  ,                    
+variable =="Women in total police (2011- 2016)"                           ~  "Trends"  ,                    
+variable =="Women officers in total police (2011- 2016)"                  ~ "Trends"   ,                   
+variable =="Constable vacancies (2011- 2016)"                             ~ "Trends"     ,                  
+variable =="Officer vacancies (2011- 2016)"                               ~ "Trends"      ,                 
+variable =="Spend on police per person (Rs, 2016-17)"                     ~ "Budgets"       ,                
+variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"~ "Trends"))
+
+police_m_UT <- police_m_UT %>%   
+      mutate("worst value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_UT$lowvalue[which(police_m_UT$variable =="Modernisation fund used (%, 2016-17"&police_m_UT$States=="Puducherry")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Total % of women in police (2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Total % of women officers (2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Population per civil police (numbers, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Constable vacancy (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Officers vacancy (%, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Total % of officers in civil police (2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Women in total police (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Women officers in total police (2011- 2016)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Constable vacancies (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Officer vacancies (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Spend on police per person (Rs, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_UT$States=="Puducherry")]))
+  
+  
+  police_m_UT <- police_m_UT %>% 
+  mutate("Best value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_UT$highvalue[which(police_m_UT$variable =="Modernisation fund used (%, 2016-17"&police_m_UT$States=="Puducherry")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Total % of women in police (2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Total % of women officers (2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Population per civil police (numbers, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Constable vacancy (%, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Officers vacancy (%, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Total % of officers in civil police (2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_UT$States=="Puducherry")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Women in total police (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Women officers in total police (2011- 2016)"&police_m_UT$States=="Puducherry")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Constable vacancies (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_UT$lowvalue[which(police_m_UT$variable =="Officer vacancies (2011- 2016)"&police_m_UT$States=="Puducherry")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="Spend on police per person (Rs, 2016-17)"&police_m_UT$States=="Puducherry")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_UT$highvalue[which(police_m_UT$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_UT$States=="Puducherry")]))
+
+police_m_UT <- left_join(police_m_UT,police_score_UT,by=c("States", "variable"))
+
+police_m_UT <- police_m_UT %>% 
+  group_by(variable) %>% 
+ mutate(rank = dense_rank(desc(score)))
+
+
+
+
+```
+
+For Conflict States
+```{r}
+
+police_m_low3 <- police_m %>% 
+  select("States", "Clusters","variable", "value") %>% 
+  filter(Clusters=="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(lowvalue=min(value, na.rm = TRUE))
+
+police_m_high3 <- police_m %>% 
+  filter(Clusters =="Conflict States") %>% 
+  group_by(variable) %>% 
+  summarise(highvalue=max(value, na.rm = TRUE))
+
+police_m_CS <- police_m %>% 
+  filter(Clusters=="Conflict States")
+
+police_m_CS <- left_join(police_m_CS, police_m_high3, by = "variable") 
+police_m_CS <- left_join(police_m_CS, police_m_low3, by = "variable")
+
+police_score_CS <- melt(police_CS_score, id.vars = c("States"), measure.vars = c(
+"Modernisation fund used (%, 2016-17",                                                  
+"Total % of women in police (2016-17)" ,                                                
+"Total % of women officers (2016-17)"   ,                                               
+"SC officers, actual to reserved ratio (%, 2016-17)" ,                                  
+"ST officers, actual to reserved ratio (%, 2016-17)"  ,                                 
+"OBC officers, actual to reserved ratio (%, 2016-17)"   ,                               
+"Population per civil police (numbers, 2016-17)"         ,                              
+"Constable vacancy (%, 2016-17)"                          ,                             
+"Officers vacancy (%, 2016-17)"                            ,                            
+"Total % of officers in civil police (2016-17)"             ,                           
+"Population per police police station (rural) (number, 2016-17)",                       
+"Population per police police station (urban) (number, 2016-17)" ,                      
+"Av. area covered per police station (rural) (Sq Kms, 2016-17)"   ,                     
+"Av. area covered per police station (urban) (Sq Kms, 2016-17)"    ,                    
+"Women in total police (2011- 2016)"                               ,                    
+"Women officers in total police (2011- 2016)"                       ,                   
+"Constable vacancies (2011- 2016)"                                   ,                  
+"Officer vacancies (2011- 2016)"                                      ,                 
+"Spend on police per person (Rs, 2016-17)"                             ,                
+"budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"))
+
+colnames(police_score_CS)[3] <- "score"
+
+
+police_m_CS <- police_m_CS %>% 
+ mutate("Themes" = case_when(
+   variable == "Modernisation fund used (%, 2016-17" ~ "Budgets",                                                  
+variable == "Total % of women in police (2016-17)" ~ "Diversity" ,                                                
+variable == "Total % of women officers (2016-17)" ~ "Diversity"  ,                                               
+variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                  
+variable =="ST officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity" ,                                 
+variable =="OBC officers, actual to reserved ratio (%, 2016-17)" ~ "Diversity"  ,                               
+variable =="Population per civil police (numbers, 2016-17)" ~   "Human Resources"    ,                              
+variable =="Constable vacancy (%, 2016-17)"               ~ "Human Resources"          ,                             
+variable =="Officers vacancy (%, 2016-17)"                 ~  "Human Resources"         ,                            
+variable =="Total % of officers in civil police (2016-17)"  ~ "Human Resources"          ,                           
+variable =="Population per police police station (rural) (number, 2016-17)" ~ "Infrastructure"  ,                       
+variable =="Population per police police station (urban) (number, 2016-17)" ~  "Infrastructure",                      
+variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"~  "Infrastructure" ,                     
+variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ "Infrastructure"  ,                    
+variable =="Women in total police (2011- 2016)"                           ~  "Trends"  ,                    
+variable =="Women officers in total police (2011- 2016)"                  ~ "Trends"   ,                   
+variable =="Constable vacancies (2011- 2016)"                             ~ "Trends"     ,                  
+variable =="Officer vacancies (2011- 2016)"                               ~ "Trends"      ,                 
+variable =="Spend on police per person (Rs, 2016-17)"                     ~ "Budgets"       ,                
+variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"~ "Trends"))
+
+police_m_CS <- police_m_CS %>%   
+    mutate("worst value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_CS$lowvalue[which(police_m_CS$variable =="Modernisation fund used (%, 2016-17"&police_m_CS$States=="Manipur")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Total % of women in police (2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Total % of women officers (2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Population per civil police (numbers, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Constable vacancy (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Officers vacancy (%, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Total % of officers in civil police (2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Women in total police (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Women officers in total police (2011- 2016)"&police_m_CS$States=="Manipur")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Constable vacancies (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Officer vacancies (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Spend on police per person (Rs, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_CS$States=="Manipur")]))
+  
+  
+  police_m_CS <- police_m_CS %>% 
+  mutate("Best value" = case_when(
+    variable == "Modernisation fund used (%, 2016-17"~ police_m_CS$highvalue[which(police_m_CS$variable =="Modernisation fund used (%, 2016-17"&police_m_CS$States=="Manipur")],
+    variable == "Total % of women in police (2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Total % of women in police (2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Total % of women officers (2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Total % of women officers (2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "SC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="SC officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "ST officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="ST officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "OBC officers, actual to reserved ratio (%, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="OBC officers, actual to reserved ratio (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Population per civil police (numbers, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Population per civil police (numbers, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Constable vacancy (%, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Constable vacancy (%, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Officers vacancy (%, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Officers vacancy (%, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Total % of officers in civil police (2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Total % of officers in civil police (2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Population per police police station (rural) (number, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Population per police police station (rural) (number, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Population per police police station (urban) (number, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Population per police police station (urban) (number, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Av. area covered per police station (rural) (Sq Kms, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Av. area covered per police station (rural) (Sq Kms, 2016-17)"&police_m_CS$States=="Manipur")],
+    variable == "Av. area covered per police station (urban) (Sq Kms, 2016-17)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Av. area covered per police station (urban) (Sq Kms, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "Women in total police (2011- 2016)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Women in total police (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Women officers in total police (2011- 2016)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Women officers in total police (2011- 2016)"&police_m_CS$States=="Manipur")] ,
+    variable == "Constable vacancies (2011- 2016)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Constable vacancies (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Officer vacancies (2011- 2016)" ~ police_m_CS$lowvalue[which(police_m_CS$variable =="Officer vacancies (2011- 2016)"&police_m_CS$States=="Manipur")],
+    variable == "Spend on police per person (Rs, 2016-17)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="Spend on police per person (Rs, 2016-17)"&police_m_CS$States=="Manipur")] ,
+    variable == "budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)" ~ police_m_CS$highvalue[which(police_m_CS$variable =="budget comparison (trend in pillar expenditure - trend in state expenditure)(2015-16)"&police_m_CS$States=="Manipur")]))
+
+police_m_CS <- left_join(police_m_CS,police_score_CS,by=c("States", "variable"))
+
+police_m_CS <- police_m_CS %>% 
+  group_by(variable) %>% 
+  mutate(rank = dense_rank(desc(score)))
+
+
+
+```
+
+RBINDING sheets
+
+```{r}
+
+police_mf <- rbind(police_m_mid_large, police_m_small)
+police_mf <- rbind(police_mf, police_m_UT)
+police_mf <- rbind(police_mf, police_m_CS)
+
+```
+
+
+```{r}
+write_xlsx(police_mf, "/Users/shreyaagarwal/Documents/Code/Tata Trusts/Design/police_design.xlsx")
+
+```
+
+
+
+
+
+
+
+
